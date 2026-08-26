@@ -1,0 +1,12 @@
+{
+  "name": "dsh-skill-fusion",
+  "version": "0.1.0",
+  "description": "Skill lifecycle manager for DeepSeek Harness: discover, audit, activate, freeze any skill package.",
+  "type": "module",
+  "bin": { "skill-fusion": "bin/skill-fusion.js" },
+  "files": ["lib", "bin", "skills", "client", "cordis.patch.yml", "README.md", "LICENSE"],
+  "engines": { "node": ">=18.0.0" },
+  "scripts": { "test": "node --test" },
+  "license": "MIT",
+  "keywords": ["deepseek", "harness", "dsh", "dsh-skill", "skill", "lifecycle"]
+}
