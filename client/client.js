@@ -16,6 +16,11 @@ window.__ModuleLoader__.load({
       audit: "Audit",
       activate: "Activate",
       uninstall: "Uninstall",
+      freeze: "Freeze",
+      unfreeze: "Unfreeze",
+      update: "Update",
+      rollback: "Rollback",
+      export: "Export",
       loading: "Loading…",
       empty: "No skills found.",
       emptyActivated: "No skills activated yet.",
@@ -27,6 +32,7 @@ window.__ModuleLoader__.load({
       status: "Status",
       active: "active",
       orphan: "orphan",
+      frozen: "frozen",
       intro: "Discover, audit, and activate skills for DeepSeek Harness. Activated skills appear in ~/.dsh/skills and are discovered natively.",
       npmPlaceholder: "Enter npm package name (e.g. adversarial-review)",
       localPlaceholder: "Enter local path (e.g. ~/my-skills)",
@@ -36,6 +42,7 @@ window.__ModuleLoader__.load({
       blocked: "Blocked",
       skills: "skills",
       noFlags: "No injection vectors flagged.",
+      exported: "Exported",
     };
     const zh = {
       nav: "技能熔炉",
@@ -47,6 +54,11 @@ window.__ModuleLoader__.load({
       audit: "审计",
       activate: "激活",
       uninstall: "卸载",
+      freeze: "冻结",
+      unfreeze: "解冻",
+      update: "更新",
+      rollback: "回滚",
+      export: "导出",
       loading: "加载中…",
       empty: "未发现技能。",
       emptyActivated: "尚未激活任何技能。",
@@ -58,6 +70,7 @@ window.__ModuleLoader__.load({
       status: "状态",
       active: "已激活",
       orphan: "孤儿",
+      frozen: "已冻结",
       intro: "发现、审计、激活 DeepSeek Harness 技能。激活后技能出现在 ~/.dsh/skills 并被原生发现。",
       npmPlaceholder: "输入 npm 包名(如 adversarial-review)",
       localPlaceholder: "输入本地路径(如 ~/my-skills)",
@@ -67,6 +80,7 @@ window.__ModuleLoader__.load({
       blocked: "已阻断",
       skills: "技能",
       noFlags: "未标记注入向量。",
+      exported: "已导出",
     };
 
     const s = {
@@ -84,6 +98,7 @@ window.__ModuleLoader__.load({
       btn: (primary) => ({ padding: "5px 12px", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "6px", background: primary ? "var(--dsw-alias-bg-accent)" : "var(--dsw-alias-bg-layer-1)", color: primary ? "var(--dsw-alias-label-on-accent)" : "var(--dsw-alias-label-primary)", font: "inherit", cursor: "pointer", fontSize: "12px" }),
       cards: { display: "flex", flexDirection: "column", gap: "10px" },
       auditBox: { border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "6px", padding: "8px", fontSize: "12px", fontFamily: "monospace", whiteSpace: "pre-wrap", color: "var(--dsw-alias-label-secondary)", background: "var(--dsw-alias-bg-layer-1)" },
+      frozenBadge: { fontSize: "11px", padding: "0 6px", borderRadius: "999px", background: "color-mix(in srgb, var(--dsw-alias-state-warning-primary, #d97706) 14%, transparent)", color: "var(--dsw-alias-state-warning-primary, #d97706)" },
     };
 
     const PASS_COLOR = "var(--dsw-alias-state-success-primary, #16a34a)";
@@ -91,12 +106,14 @@ window.__ModuleLoader__.load({
     const BLOCK_COLOR = "var(--dsw-alias-state-error-primary, #dc2626)";
     function verdictColor(v) { return v === "pass" ? PASS_COLOR : v === "warn" ? WARN_COLOR : BLOCK_COLOR; }
 
-    function SkillCard({ skill, t, onAudit, onActivate, onUninstall, auditResult }) {
+    function SkillCard({ skill, t, onAudit, onActivate, onUninstall, onFreeze, onUnfreeze, onUpdate, onRollback, auditResult }) {
       const verdict = auditResult?.verdict;
+      const isFrozen = skill.status === "frozen" || skill.frozenVersion != null;
       return react.createElement("div", { style: s.card },
         react.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
           react.createElement("strong", { style: s.cardTitle }, skill.name),
-          verdict ? react.createElement("span", { style: s.badge(verdictColor(verdict)) }, t(verdict)) : null
+          verdict ? react.createElement("span", { style: s.badge(verdictColor(verdict)) }, t(verdict)) : null,
+          isFrozen ? react.createElement("span", { style: s.frozenBadge }, t("frozen") + (skill.frozenVersion ? ` @${skill.frozenVersion}` : "")) : null
         ),
         react.createElement("p", { style: s.cardDesc }, skill.description),
         react.createElement("p", { style: s.meta },
@@ -111,6 +128,10 @@ window.__ModuleLoader__.load({
         react.createElement("div", { style: s.actions },
           onAudit ? react.createElement("button", { style: s.btn(false), onClick: onAudit }, t("audit")) : null,
           onActivate ? react.createElement("button", { style: s.btn(true), onClick: onActivate }, t("activate")) : null,
+          onFreeze ? react.createElement("button", { style: s.btn(false), onClick: onFreeze }, t("freeze")) : null,
+          onUnfreeze ? react.createElement("button", { style: s.btn(false), onClick: onUnfreeze }, t("unfreeze")) : null,
+          onUpdate ? react.createElement("button", { style: s.btn(false), onClick: onUpdate }, t("update")) : null,
+          onRollback ? react.createElement("button", { style: s.btn(false), onClick: onRollback }, t("rollback")) : null,
           onUninstall ? react.createElement("button", { style: s.btn(false), onClick: onUninstall }, t("uninstall")) : null
         )
       );
@@ -177,6 +198,7 @@ window.__ModuleLoader__.load({
     function ActivatedView({ t }) {
       const [skills, setSkills] = react.useState(null);
       const [loading, setLoading] = react.useState(true);
+      const [exportMsg, setExportMsg] = react.useState(null);
       const fetchList = async () => {
         try {
           const res = await fetch("/api/skill-fusion/list");
@@ -186,17 +208,66 @@ window.__ModuleLoader__.load({
         setLoading(false);
       };
       react.useEffect(() => { fetchList(); }, []);
+
       const doUninstall = async (name) => {
         const res = await fetch("/api/skill-fusion/uninstall", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }) });
         const data = await res.json();
         if (data.ok) fetchList();
       };
+      const doFreeze = async (name) => {
+        const version = prompt("Version to freeze at (e.g. 1.0.0):");
+        if (!version) return;
+        const res = await fetch("/api/skill-fusion/freeze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, version }) });
+        const data = await res.json();
+        if (data.ok) fetchList();
+      };
+      const doUnfreeze = async (name) => {
+        const res = await fetch("/api/skill-fusion/unfreeze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }) });
+        const data = await res.json();
+        if (data.ok) fetchList();
+      };
+      const doUpdate = async (name) => {
+        const res = await fetch("/api/skill-fusion/update", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }) });
+        const data = await res.json();
+        if (data.ok) fetchList();
+      };
+      const doRollback = async (name) => {
+        const res = await fetch("/api/skill-fusion/rollback", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }) });
+        const data = await res.json();
+        if (data.ok) fetchList();
+      };
+      const doExport = async () => {
+        const res = await fetch("/api/skill-fusion/export");
+        const data = await res.json();
+        if (data.ok) {
+          const blob = new Blob([JSON.stringify(data.bundle, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `skill-fusion-bundle-${new Date().toISOString().slice(0, 10)}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          setExportMsg(t("exported"));
+        }
+      };
+
       return react.createElement("div", { style: s.section },
         react.createElement("p", { style: s.intro }, t("intro")),
+        react.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "center" } },
+          react.createElement("button", { style: s.btn(false), onClick: doExport }, t("export")),
+          exportMsg ? react.createElement("span", { style: s.meta }, exportMsg) : null
+        ),
         loading ? react.createElement("p", { style: s.intro }, t("loading")) : null,
         skills !== null && skills.length === 0 ? react.createElement("p", { style: s.intro }, t("emptyActivated")) : null,
         skills ? react.createElement("div", { style: s.cards },
-          skills.map(sk => react.createElement(SkillCard, { key: sk.name, skill: sk, t, onUninstall: () => doUninstall(sk.name) }))
+          skills.map(sk => react.createElement(SkillCard, {
+            key: sk.name, skill: sk, t,
+            onUninstall: () => doUninstall(sk.name),
+            onFreeze: sk.status === "frozen" || sk.frozenVersion ? undefined : () => doFreeze(sk.name),
+            onUnfreeze: sk.status === "frozen" || sk.frozenVersion ? () => doUnfreeze(sk.name) : undefined,
+            onUpdate: () => doUpdate(sk.name),
+            onRollback: () => doRollback(sk.name),
+          }))
         ) : null
       );
     }
