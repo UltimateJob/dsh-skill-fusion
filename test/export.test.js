@@ -38,7 +38,8 @@ test("importBundle merges into existing manifest", async () => {
   const outPath = join(home1, "backup.json");
   await exportBundle(m1, home1, outPath);
   const existing = emptyManifest();
-  const r = await importBundle(outPath, home2, existing);
+  const bundle = JSON.parse(readFileSync(outPath, "utf8"));
+  const r = await importBundle(bundle, home2, existing);
   assert.equal(r.ok, true);
   assert.ok(r.imported.includes("adversarial-review"));
   assert.ok(r.manifest.skills["adversarial-review"]);
@@ -54,7 +55,8 @@ test("importBundle skips existing skills (merge semantics)", async () => {
   await exportBundle(m1, home1, outPath);
   // home2 already has adversarial-review
   let existing = upsertSkill(emptyManifest(), "adversarial-review", { sourceKind: "local", sourceRef: "/other", version: null, commit: null, activationMode: "copy", activatedAt: "t", frozenVersion: null, lastAudit: null, status: "active" });
-  const r = await importBundle(outPath, home2, existing);
+  const bundle2 = JSON.parse(readFileSync(outPath, "utf8"));
+  const r = await importBundle(bundle2, home2, existing);
   assert.equal(r.ok, true);
   assert.equal(r.imported.length, 0);
   assert.equal(r.manifest.skills["adversarial-review"].sourceRef, "/other");
@@ -62,8 +64,6 @@ test("importBundle skips existing skills (merge semantics)", async () => {
 
 test("importBundle on invalid bundle returns error", async () => {
   const home = freshHome();
-  const badPath = join(home, "bad.json");
-  writeFileSync(badPath, "not json", "utf8");
-  const r = await importBundle(badPath, home, emptyManifest());
+  const r = await importBundle({ version: 999 }, home, emptyManifest());
   assert.equal(r.ok, false);
 });
