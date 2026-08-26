@@ -1,0 +1,5 @@
+# dsh-skill-fusion bundle patch — inserts its row into the web plugin roster.
+# Install with:  dsh plugin --profile web add dsh-skill-fusion
+- insert:
+    - id: skill-fusion
+      name: dsh-skill-fusion
