@@ -8,5 +8,16 @@
   "engines": { "node": ">=18.0.0" },
   "scripts": { "test": "node --test" },
   "license": "MIT",
-  "keywords": ["deepseek", "harness", "dsh", "dsh-skill", "skill", "lifecycle"]
+  "keywords": ["deepseek", "harness", "dsh", "dsh-skill", "skill", "lifecycle"],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "inject": ["@deepseek-ai/dsh-client-runtime", "@deepseek-ai/dsh-client-locale", "@deepseek-ai/dsh-client-ui-settings"],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "@deepseek-ai/cordis": "^4.0.1"
+  }
 }
