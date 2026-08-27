@@ -71,3 +71,39 @@ test("POST /api/skill-fusion/activate with sourceKind=claude activates", async (
   assert.equal(payload.activated, "my-skill");
   assert.equal(payload.mode, "symlink");
 });
+
+test("GET /api/skill-fusion/discover?source=market returns ranked results", async () => {
+  const home = freshHome();
+  const routes = skillFusionRoutes(home);
+  const origFetch = globalThis.fetch;
+  // Stub both search endpoints used by searchMarket
+  globalThis.fetch = async (url) => {
+    if (url.includes("search/repositories")) {
+      return { ok: true, json: async () => ({ items: [
+        { full_name: "obra/superpowers", stargazers_count: 278181, description: "skills framework", html_url: "u1", default_branch: "main" },
+      ] }) };
+    }
+    if (url.includes("/-/v1/search")) {
+      return { ok: true, json: async () => ({ objects: [
+        { package: { name: "claude-skill", version: "1.0.0", description: "pkg", links: { npm: "n1" } }, score: { detail: { popularity: 0.9 } } },
+      ] }) };
+    }
+    throw new Error(`unexpected: ${url}`);
+  };
+  try {
+    const r = routes.find(x => x.path === "/api/skill-fusion/discover");
+    const res = mockRes();
+    await r.handler(mockReq("GET", "/api/skill-fusion/discover?source=market&q=claude%20skill"), res);
+    const payload = JSON.parse(res.result.body);
+    assert.equal(payload.ok, true);
+    assert.ok(Array.isArray(payload.candidates));
+    assert.equal(payload.candidates.length, 2);
+    assert.equal(payload.candidates[0].name, "obra/superpowers");
+    assert.equal(payload.candidates[0].rankKind, "stars");
+    const npm = payload.candidates.find(c => c.sourceMarket === "npm");
+    assert.ok(npm);
+    assert.equal(npm.rankKind, "popularity");
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});

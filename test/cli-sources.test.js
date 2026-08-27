@@ -60,3 +60,33 @@ test("cli activate without source flag shows usage", async () => {
   const code = await runCli(["activate", "--name", "test"], { out: () => {}, dshHome: home });
   assert.equal(code, 2);
 });
+
+test("cli discover --market prints ranked results", async () => {
+  const home = freshHome();
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (url.includes("search/repositories")) {
+      return { ok: true, json: async () => ({ items: [
+        { full_name: "obra/superpowers", stargazers_count: 278181, description: "skills framework", html_url: "u1", default_branch: "main" },
+      ] }) };
+    }
+    if (url.includes("/-/v1/search")) {
+      return { ok: true, json: async () => ({ objects: [
+        { package: { name: "claude-skill", version: "1.0.0", description: "pkg", links: { npm: "n1" } }, score: { detail: { popularity: 0.9 } } },
+      ] }) };
+    }
+    throw new Error(`unexpected: ${url}`);
+  };
+  try {
+    const lines = [];
+    const code = await runCli(["discover", "--market", "claude skill"], { out: s => lines.push(s), dshHome: home });
+    assert.equal(code, 0);
+    const text = lines.join("\n");
+    assert.ok(text.includes("obra/superpowers"));
+    assert.ok(text.includes("278k★"), `should show star rank: ${text}`);
+    assert.ok(text.includes("claude-skill"));
+    assert.ok(text.includes("pop 0.900"), `should show npm popularity: ${text}`);
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
