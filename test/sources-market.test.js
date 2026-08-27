@@ -44,7 +44,30 @@ test("searchMarket: handles one source failing", async () => {
   assert.equal(r[0].name, "only-npm");
 });
 
-test("searchMarket: empty query returns empty", async () => {
-  const r = await searchMarket("", { fetchFn: async () => ({ ok: false }) });
-  assert.equal(r.length, 0);
+test("searchMarket: empty query returns featured homepage ranked by stars", async () => {
+  const mockFetch = async (url) => {
+    // Featured repo metadata fetches (repos/<owner>/<repo>)
+    const repoMeta = url.match(/api\.github\.com\/repos\/([^/]+\/[^/]+)$/);
+    if (repoMeta) {
+      const stars = { "obra/superpowers": 278322, "wshobson/agents": 39177, "anthropics/skills": 171934 }[repoMeta[1]] || 1000;
+      return { ok: true, json: async () => ({ full_name: repoMeta[1], stargazers_count: stars, description: "d", html_url: "u", default_branch: "main" }) };
+    }
+    // Trending search
+    if (url.includes("search/repositories")) {
+      return { ok: true, json: async () => ({ items: [
+        { full_name: "trending/one", stargazers_count: 5000, description: "t", html_url: "u", default_branch: "main" },
+      ] }) };
+    }
+    return { ok: false, status: 404 };
+  };
+  const r = await searchMarket("", { fetchFn: mockFetch });
+  assert.ok(r.length > 0, "should return featured content");
+  // Sorted by stars descending: obra/superpowers (278k) first
+  assert.equal(r[0].name, "obra/superpowers");
+  assert.equal(r[0].featured, true);
+  assert.ok(r[0].rank > r[r.length - 1].rank, "should be ranked by stars descending");
+  // Featured repos + trending all present
+  const names = r.map(c => c.name);
+  assert.ok(names.includes("anthropics/skills"));
+  assert.ok(names.includes("trending/one"));
 });

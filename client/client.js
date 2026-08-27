@@ -218,22 +218,21 @@ window.__ModuleLoader__.load({
       const [loading, setLoading] = react.useState(false);
       const [auditMap, setAuditMap] = react.useState({});
 
-      const buildSearchUrl = () => {
-        if (mode === "market") return `/api/skill-fusion/discover?source=market&q=${encodeURIComponent(query)}`;
-        if (mode === "npm") return `/api/skill-fusion/discover?source=npm&name=${encodeURIComponent(query)}`;
-        if (mode === "github") return `/api/skill-fusion/discover?source=github&repo=${encodeURIComponent(query)}&ref=${encodeURIComponent(ref || "main")}`;
-        if (mode === "local") return `/api/skill-fusion/discover?source=local&path=${encodeURIComponent(path)}`;
-        if (mode === "claude") return `/api/skill-fusion/discover?source=claude${path ? "&path=" + encodeURIComponent(path) : ""}`;
-        return `/api/skill-fusion/discover?source=codex${path ? "&path=" + encodeURIComponent(path) : ""}`;
-      };
-
-      const doSearch = async () => {
+      const doSearch = async (qOverride) => {
+        const effectiveQuery = qOverride !== undefined ? qOverride : query;
         setLoading(true);
         setResults(null);
         setAuditMap({});
         setExpanded({});
         try {
-          const res = await fetch(buildSearchUrl());
+          let url;
+          if (mode === "market") url = `/api/skill-fusion/discover?source=market&q=${encodeURIComponent(effectiveQuery)}`;
+          else if (mode === "npm") url = `/api/skill-fusion/discover?source=npm&name=${encodeURIComponent(query)}`;
+          else if (mode === "github") url = `/api/skill-fusion/discover?source=github&repo=${encodeURIComponent(query)}&ref=${encodeURIComponent(ref || "main")}`;
+          else if (mode === "local") url = `/api/skill-fusion/discover?source=local&path=${encodeURIComponent(path)}`;
+          else if (mode === "claude") url = `/api/skill-fusion/discover?source=claude${path ? "&path=" + encodeURIComponent(path) : ""}`;
+          else url = `/api/skill-fusion/discover?source=codex${path ? "&path=" + encodeURIComponent(path) : ""}`;
+          const res = await fetch(url);
           const data = await res.json();
           if (data.ok) setResults(data.candidates);
           else setResults([]);
@@ -241,6 +240,15 @@ window.__ModuleLoader__.load({
         } catch { setResults([]); setMarketMode(false); }
         setLoading(false);
       };
+
+      // Auto-load the featured market homepage the first time the market tab shows.
+      const autoLoaded = react.useRef(false);
+      react.useEffect(() => {
+        if (mode === "market" && !autoLoaded.current) {
+          autoLoaded.current = true;
+          doSearch("");
+        }
+      }, [mode]);
 
       const doInspect = async (item) => {
         try {
