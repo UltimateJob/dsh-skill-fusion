@@ -16,6 +16,15 @@ window.__ModuleLoader__.load({
       github: "GitHub",
       claude: "Claude",
       codex: "Codex",
+      market: "Market",
+      search: "Search",
+      inspect: "Find skills",
+      inspectRepo: "Find skills inside",
+      rank: "Rank",
+      openRepo: "Open repo",
+      stars: "stars",
+      popularity: "popularity",
+      noSkillsIn: "No skills found in",
       audit: "Audit",
       activate: "Activate",
       uninstall: "Uninstall",
@@ -26,6 +35,7 @@ window.__ModuleLoader__.load({
       export: "Export",
       loading: "Loading…",
       empty: "No skills found.",
+      emptyMarket: "No market results. Try a different keyword.",
       emptyActivated: "No skills activated yet.",
       verdict: "Verdict",
       pass: "pass",
@@ -36,7 +46,8 @@ window.__ModuleLoader__.load({
       active: "active",
       orphan: "orphan",
       frozen: "frozen",
-      intro: "Discover, audit, and activate skills for DeepSeek Harness. Activated skills appear in ~/.dsh/skills and are discovered natively.",
+      intro: "Discover, audit, and activate skills for DeepSeek Harness. Search the GitHub/npm skill market by keyword and activate with one click.",
+      marketPlaceholder: "Search skills… e.g. claude code review, web design, agent",
       npmPlaceholder: "Enter npm package name (e.g. adversarial-review)",
       localPlaceholder: "Enter local path (e.g. ~/my-skills)",
       githubPlaceholder: "owner/repo (e.g. UltimateJob/dsh-skill-fusion)",
@@ -61,6 +72,15 @@ window.__ModuleLoader__.load({
       github: "GitHub",
       claude: "Claude",
       codex: "Codex",
+      market: "市场",
+      search: "搜索",
+      inspect: "发现技能",
+      inspectRepo: "查找其中技能",
+      rank: "排名",
+      openRepo: "打开仓库",
+      stars: "星标",
+      popularity: "热度",
+      noSkillsIn: "未在以下位置找到技能",
       audit: "审计",
       activate: "激活",
       uninstall: "卸载",
@@ -71,6 +91,7 @@ window.__ModuleLoader__.load({
       export: "导出",
       loading: "加载中…",
       empty: "未发现技能。",
+      emptyMarket: "市场无结果。换个关键词试试。",
       emptyActivated: "尚未激活任何技能。",
       verdict: "结论",
       pass: "通过",
@@ -81,7 +102,8 @@ window.__ModuleLoader__.load({
       active: "已激活",
       orphan: "孤儿",
       frozen: "已冻结",
-      intro: "发现、审计、激活 DeepSeek Harness 技能。激活后技能出现在 ~/.dsh/skills 并被原生发现。",
+      intro: "发现、审计、激活 DeepSeek Harness 技能。按关键词搜索 GitHub/npm 技能市场,一键激活即可使用。",
+      marketPlaceholder: "搜索技能…如 claude 代码审查、网页设计、agent",
       npmPlaceholder: "输入 npm 包名(如 adversarial-review)",
       localPlaceholder: "输入本地路径(如 ~/my-skills)",
       githubPlaceholder: "owner/repo(如 UltimateJob/dsh-skill-fusion)",
@@ -113,6 +135,9 @@ window.__ModuleLoader__.load({
       cards: { display: "flex", flexDirection: "column", gap: "10px" },
       auditBox: { border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "6px", padding: "8px", fontSize: "12px", fontFamily: "monospace", whiteSpace: "pre-wrap", color: "var(--dsw-alias-label-secondary)", background: "var(--dsw-alias-bg-layer-1)" },
       frozenBadge: { fontSize: "11px", padding: "0 6px", borderRadius: "999px", background: "color-mix(in srgb, var(--dsw-alias-state-warning-primary, #d97706) 14%, transparent)", color: "var(--dsw-alias-state-warning-primary, #d97706)" },
+      rankBadge: { fontSize: "11px", padding: "0 8px", borderRadius: "999px", background: "color-mix(in srgb, var(--dsw-alias-state-success-primary, #16a34a) 14%, transparent)", color: "var(--dsw-alias-state-success-primary, #16a34a)", fontWeight: 600, whiteSpace: "nowrap" },
+      srcBadge: { fontSize: "11px", padding: "0 8px", borderRadius: "999px", background: "color-mix(in srgb, var(--dsw-alias-border-l2, #888) 20%, transparent)", color: "var(--dsw-alias-label-secondary)", whiteSpace: "nowrap" },
+      link: { color: "var(--dsw-alias-accent, #4f8cff)", fontSize: "12px", textDecoration: "none" },
     };
 
     const PASS_COLOR = "var(--dsw-alias-state-success-primary, #16a34a)";
@@ -151,75 +176,119 @@ window.__ModuleLoader__.load({
       );
     }
 
+    // Market result card: a GitHub repo or npm package that may contain skills.
+    function MarketCard({ item, t, onInspect, expanded, onActivate, onAudit, auditMap }) {
+      const rankBadge = item.rankKind === "stars"
+        ? react.createElement("span", { style: s.rankBadge }, `${item.rankLabel} ${t("stars")}`)
+        : react.createElement("span", { style: s.rankBadge }, `${t("popularity")} ${item.rankLabel}`);
+      const srcBadge = react.createElement("span", { style: s.srcBadge }, item.sourceMarket === "github" ? "GitHub" : "npm");
+      const skillsInside = expanded ? expanded.filter(Boolean) : [];
+      return react.createElement("div", { style: s.card },
+        react.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" } },
+          react.createElement("strong", { style: s.cardTitle }, item.name),
+          react.createElement("div", { style: { display: "flex", gap: "6px", alignItems: "center" } }, srcBadge, rankBadge)
+        ),
+        react.createElement("p", { style: s.cardDesc }, item.description || ""),
+        react.createElement("div", { style: s.actions },
+          item.url ? react.createElement("a", { href: item.url, target: "_blank", rel: "noreferrer", style: s.link }, t("openRepo")) : null,
+          react.createElement("button", { style: s.btn(false), onClick: () => onInspect(item) },
+            skillsInside.length > 0 ? `${t("inspect")} (${skillsInside.length})` : t("inspect")
+          )
+        ),
+        skillsInside.length > 0 ? react.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginTop: "4px" } },
+          skillsInside.map(sk => react.createElement(SkillCard, {
+            key: sk.name, skill: sk, t,
+            onAudit: () => onAudit(sk, item),
+            onActivate: () => onActivate(sk, item),
+            auditResult: auditMap[item.name + ":" + sk.name],
+          }))
+        ) : expanded && expanded.length === 0 ? react.createElement("p", { style: s.meta }, `${t("noSkillsIn")} ${item.name}`) : null
+      );
+    }
+
     function DiscoverView({ t }) {
-      const SOURCES = ["npm", "github", "local", "claude", "codex"];
-      const [mode, setMode] = react.useState("npm");
-      const [query, setQuery] = react.useState("");      // npm pkg name or github owner/repo
+      const SOURCES = ["market", "npm", "github", "local", "claude", "codex"];
+      const [mode, setMode] = react.useState("market");
+      const [query, setQuery] = react.useState("");      // market keyword / npm pkg / github repo
       const [path, setPath] = react.useState("");        // local/claude/codex path override
       const [ref, setRef] = react.useState("");           // github ref
       const [results, setResults] = react.useState(null);
+      const [marketMode, setMarketMode] = react.useState(false);
+      const [expanded, setExpanded] = react.useState({});  // { repoName: [skillCandidates] }
       const [loading, setLoading] = react.useState(false);
       const [auditMap, setAuditMap] = react.useState({});
 
       const buildSearchUrl = () => {
-        let url = "/api/skill-fusion/discover?source=" + mode;
-        if (mode === "npm") url += "&name=" + encodeURIComponent(query);
-        else if (mode === "github") {
-          url += "&repo=" + encodeURIComponent(query);
-          if (ref) url += "&ref=" + encodeURIComponent(ref);
-        } else {
-          if (path) url += "&path=" + encodeURIComponent(path);
-        }
-        return url;
+        if (mode === "market") return `/api/skill-fusion/discover?source=market&q=${encodeURIComponent(query)}`;
+        if (mode === "npm") return `/api/skill-fusion/discover?source=npm&name=${encodeURIComponent(query)}`;
+        if (mode === "github") return `/api/skill-fusion/discover?source=github&repo=${encodeURIComponent(query)}&ref=${encodeURIComponent(ref || "main")}`;
+        if (mode === "local") return `/api/skill-fusion/discover?source=local&path=${encodeURIComponent(path)}`;
+        if (mode === "claude") return `/api/skill-fusion/discover?source=claude${path ? "&path=" + encodeURIComponent(path) : ""}`;
+        return `/api/skill-fusion/discover?source=codex${path ? "&path=" + encodeURIComponent(path) : ""}`;
       };
 
       const doSearch = async () => {
         setLoading(true);
         setResults(null);
         setAuditMap({});
+        setExpanded({});
         try {
           const res = await fetch(buildSearchUrl());
           const data = await res.json();
           if (data.ok) setResults(data.candidates);
           else setResults([]);
-        } catch { setResults([]); }
+          setMarketMode(mode === "market");
+        } catch { setResults([]); setMarketMode(false); }
         setLoading(false);
       };
 
-      const buildAuditUrl = (name) => {
-        let url = `/api/skill-fusion/audit?source=${mode}&name=${encodeURIComponent(name)}`;
-        if (mode === "npm") url += "&name=" + encodeURIComponent(query);
-        else if (mode === "github") {
-          url = `/api/skill-fusion/audit?source=github&repo=${encodeURIComponent(query)}&name=${encodeURIComponent(name)}`;
-          if (ref) url += "&ref=" + encodeURIComponent(ref);
-        } else {
-          if (path) url += "&path=" + encodeURIComponent(path);
+      const doInspect = async (item) => {
+        try {
+          let url;
+          if (item.sourceMarket === "github") url = `/api/skill-fusion/discover?source=github&repo=${encodeURIComponent(item.name)}&ref=${encodeURIComponent(item.ref || "main")}`;
+          else url = `/api/skill-fusion/discover?source=npm&name=${encodeURIComponent(item.name)}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          setExpanded(prev => ({ ...prev, [item.name]: data.ok ? data.candidates : [] }));
+        } catch { setExpanded(prev => ({ ...prev, [item.name]: [] })); }
+      };
+
+      const doAudit = async (sk, item) => {
+        let url;
+        if (item && item.sourceMarket === "github") url = `/api/skill-fusion/audit?source=github&repo=${encodeURIComponent(item.name)}&ref=${encodeURIComponent(item.ref || "main")}&name=${encodeURIComponent(sk.name)}`;
+        else if (item && item.sourceMarket === "npm") url = `/api/skill-fusion/audit?source=npm&name=${encodeURIComponent(sk.name)}`;
+        else {
+          url = `/api/skill-fusion/audit?source=${mode}`;
+          if (mode === "npm") url += `&name=${encodeURIComponent(sk.name)}`;
+          else if (mode === "github") url += `&repo=${encodeURIComponent(query)}&ref=${encodeURIComponent(ref || "main")}&name=${encodeURIComponent(sk.name)}`;
+          else if (path) url += `&path=${encodeURIComponent(path)}`;
+          url += `&name=${encodeURIComponent(sk.name)}`;
         }
-        return url;
-      };
-
-      const doAudit = async (name) => {
-        const res = await fetch(buildAuditUrl(name));
+        const res = await fetch(url);
         const data = await res.json();
-        setAuditMap(prev => ({ ...prev, [name]: data }));
+        const key = item ? `${item.name}:${sk.name}` : sk.name;
+        setAuditMap(prev => ({ ...prev, [key]: data }));
       };
 
-      const doActivate = async (name) => {
+      const doActivate = async (sk, item) => {
         let body;
-        if (mode === "npm") body = { sourceKind: "npm", sourceRef: query, name };
-        else if (mode === "github") body = { sourceKind: "github", sourceRef: `${query}@${ref || "main"}`, name };
-        else if (mode === "local") body = { sourceKind: "local", sourceRef: path, name };
-        else if (mode === "claude") body = { sourceKind: "claude", sourceRef: path || null, name };
-        else if (mode === "codex") body = { sourceKind: "codex", sourceRef: path || null, name };
+        if (item && item.sourceMarket === "github") body = { sourceKind: "github", sourceRef: `${item.name}@${item.ref || "main"}`, name: sk.name };
+        else if (item && item.sourceMarket === "npm") body = { sourceKind: "npm", sourceRef: item.name, name: sk.name };
+        else if (mode === "npm") body = { sourceKind: "npm", sourceRef: query, name: sk.name };
+        else if (mode === "github") body = { sourceKind: "github", sourceRef: `${query}@${ref || "main"}`, name: sk.name };
+        else if (mode === "local") body = { sourceKind: "local", sourceRef: path, name: sk.name };
+        else if (mode === "claude") body = { sourceKind: "claude", sourceRef: path || null, name: sk.name };
+        else body = { sourceKind: "codex", sourceRef: path || null, name: sk.name };
         const res = await fetch("/api/skill-fusion/activate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
         const data = await res.json();
-        if (data.ok) { setResults(prev => prev.filter(c => c.name !== name)); }
+        if (data.ok) setResults(prev => (prev || []).filter(c => c.name !== sk.name));
         return data;
       };
 
-      const inputVal = mode === "npm" || mode === "github" ? query : path;
-      const onInput = e => mode === "npm" || mode === "github" ? setQuery(e.currentTarget.value) : setPath(e.currentTarget.value);
-      const placeholder = mode === "npm" ? t("npmPlaceholder")
+      const inputVal = mode === "market" || mode === "npm" || mode === "github" ? query : path;
+      const onInput = e => (mode === "market" || mode === "npm" || mode === "github") ? setQuery(e.currentTarget.value) : setPath(e.currentTarget.value);
+      const placeholder = mode === "market" ? t("marketPlaceholder")
+        : mode === "npm" ? t("npmPlaceholder")
         : mode === "github" ? t("githubPlaceholder")
         : mode === "local" ? t("localPlaceholder")
         : mode === "claude" ? t("claudePlaceholder")
@@ -231,14 +300,16 @@ window.__ModuleLoader__.load({
           ...SOURCES.map(src => react.createElement("button", { key: src, style: s.tabBtn(mode === src), onClick: () => setMode(src) }, t(src)))
         ),
         react.createElement("div", { style: { display: "flex", gap: "8px" } },
-          react.createElement("input", { style: s.input, value: inputVal, onChange: onInput, placeholder }),
+          react.createElement("input", { style: s.input, value: inputVal, onChange: onInput, placeholder, onKeyDown: e => { if (e.key === "Enter") doSearch(); } }),
           mode === "github" ? react.createElement("input", { style: Object.assign({}, s.input, { flex: "0 0 120px" }), value: ref, onChange: e => setRef(e.currentTarget.value), placeholder: t("refPlaceholder") }) : null,
-          react.createElement("button", { style: s.btn(true), onClick: doSearch }, t("browse"))
+          react.createElement("button", { style: s.btn(true), onClick: doSearch }, mode === "market" ? t("search") : t("browse"))
         ),
         loading ? react.createElement("p", { style: s.intro }, t("loading")) : null,
-        results !== null && results.length === 0 ? react.createElement("p", { style: s.intro }, t("empty")) : null,
+        results !== null && results.length === 0 ? react.createElement("p", { style: s.intro }, marketMode ? t("emptyMarket") : t("empty")) : null,
         results ? react.createElement("div", { style: s.cards },
-          results.map(c => react.createElement(SkillCard, { key: c.name, skill: c, t, onAudit: () => doAudit(c.name), onActivate: () => doActivate(c.name), auditResult: auditMap[c.name] }))
+          marketMode
+            ? results.map(item => react.createElement(MarketCard, { key: item.name, item, t, onInspect: doInspect, expanded: expanded[item.name], onActivate: doActivate, onAudit: doAudit, auditMap }))
+            : results.map(c => react.createElement(SkillCard, { key: c.name, skill: c, t, onAudit: () => doAudit(c), onActivate: () => doActivate(c), auditResult: auditMap[c.name] }))
         ) : null
       );
     }
@@ -332,12 +403,13 @@ window.__ModuleLoader__.load({
     }
 
     const NS = "skillFusion";
+    const name = "dsh-skill-fusion";
     const inject = ["slots", "locale"];
     function apply(ctx) {
       ctx.effect(() => ctx.locale.register(NS, { zh, en }), "skill-fusion: dictionaries");
       const t = ctx.locale.bind(NS);
-      ctx.effect(() => {
-        const disposer = ctx.slots.register({
+      ctx.slots.inject("settings.section", () => {
+        const off = ctx.slots.register({
           name: "settings.section",
           id: "skill-fusion",
           order: 15,
@@ -345,9 +417,10 @@ window.__ModuleLoader__.load({
           locale: NS,
           inject: () => ({}),
         }, (props) => react.createElement(SkillForgeView, Object.assign({}, props, { t })));
-        return () => disposer();
-      }, "skill-fusion: settings section");
+        return off;
+      });
     }
+    exports.name = name;
     exports.apply = apply;
     exports.inject = inject;
     return module.exports;

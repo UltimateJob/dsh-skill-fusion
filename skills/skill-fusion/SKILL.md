@@ -1,6 +1,6 @@
 ---
 name: skill-fusion
-description: Manage the skill lifecycle in DeepSeek Harness - discover, audit, activate, and freeze any skill package. Use when the user wants to install/activate a skill from a local folder, npm, GitHub, ~/.claude/skills, or ~/.codex/skills, check it for prompt-injection risks before activation, or list/uninstall already-managed skills.
+description: Manage the skill lifecycle in DeepSeek Harness - discover, audit, activate, and freeze any skill package. Search the GitHub/npm skill market by keyword with usage ranking (stars/downloads), or discover from a local folder, npm, GitHub, ~/.claude/skills, or ~/.codex/skills. Audit for prompt-injection risks before activation; list/uninstall already-managed skills.
 ---
 
 # Skill Fusion (技能熔炉)
@@ -9,8 +9,9 @@ Drive the skill lifecycle via the `skill-fusion` CLI. Activated skills land in `
 
 ## Commands
 
-### Discover (5 sources)
+### Discover (6 sources)
 
+- `skill-fusion discover --market <query>` - **search the GitHub + npm skill market by keyword**, ranked by stars/popularity. Then inspect a repo/package to list the skills inside.
 - `skill-fusion discover --local <dir> [--q <query>]` - list installable skills found in a local folder.
 - `skill-fusion discover --claude [<dir>]` - scan `~/.claude/skills/` (or override dir).
 - `skill-fusion discover --codex [<dir>]` - scan `~/.codex/skills/` (or override dir).
@@ -44,6 +45,8 @@ Drive the skill lifecycle via the `skill-fusion` CLI. Activated skills land in `
 ## Workflow
 
 For a user request like "activate the skill at ./my-skill": run `discover --local .` to confirm the candidate, `audit` to surface risks to the user, get user confirmation if `warn`/`block`, then `activate`. Always show the audit verdict before activating.
+
+For "find skills on the market" / "search for a code review skill": run `discover --market <keyword>` to get ranked GitHub repos + npm packages. Then `discover --github <owner/repo>` (or `--npm <pkg>`) to list the actual skills inside, pick one, `audit`, then `activate --github <owner/repo> --name <name>`.
 
 For "activate skill X from Claude" or "install skill from GitHub repo owner/repo": use `--claude` or `--github` flag respectively. npm and GitHub sources download a tarball before audit+activate.
 
