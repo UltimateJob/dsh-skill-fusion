@@ -13,6 +13,9 @@ window.__ModuleLoader__.load({
       source: "Source",
       local: "Local",
       npm: "npm",
+      github: "GitHub",
+      claude: "Claude",
+      codex: "Codex",
       audit: "Audit",
       activate: "Activate",
       uninstall: "Uninstall",
@@ -36,6 +39,10 @@ window.__ModuleLoader__.load({
       intro: "Discover, audit, and activate skills for DeepSeek Harness. Activated skills appear in ~/.dsh/skills and are discovered natively.",
       npmPlaceholder: "Enter npm package name (e.g. adversarial-review)",
       localPlaceholder: "Enter local path (e.g. ~/my-skills)",
+      githubPlaceholder: "owner/repo (e.g. UltimateJob/dsh-skill-fusion)",
+      claudePlaceholder: "Path override (default: ~/.claude/skills)",
+      codexPlaceholder: "Path override (default: ~/.codex/skills)",
+      refPlaceholder: "Branch/tag/ref (default: main)",
       browse: "Browse",
       confirmActivate: "Activate this skill?",
       confirmUninstall: "Uninstall this skill?",
@@ -51,6 +58,9 @@ window.__ModuleLoader__.load({
       source: "来源",
       local: "本地",
       npm: "npm",
+      github: "GitHub",
+      claude: "Claude",
+      codex: "Codex",
       audit: "审计",
       activate: "激活",
       uninstall: "卸载",
@@ -74,6 +84,10 @@ window.__ModuleLoader__.load({
       intro: "发现、审计、激活 DeepSeek Harness 技能。激活后技能出现在 ~/.dsh/skills 并被原生发现。",
       npmPlaceholder: "输入 npm 包名(如 adversarial-review)",
       localPlaceholder: "输入本地路径(如 ~/my-skills)",
+      githubPlaceholder: "owner/repo(如 UltimateJob/dsh-skill-fusion)",
+      claudePlaceholder: "路径覆盖(默认 ~/.claude/skills)",
+      codexPlaceholder: "路径覆盖(默认 ~/.codex/skills)",
+      refPlaceholder: "分支/标签/ref(默认 main)",
       browse: "浏览",
       confirmActivate: "激活此技能?",
       confirmUninstall: "卸载此技能?",
@@ -138,22 +152,33 @@ window.__ModuleLoader__.load({
     }
 
     function DiscoverView({ t }) {
+      const SOURCES = ["npm", "github", "local", "claude", "codex"];
       const [mode, setMode] = react.useState("npm");
-      const [query, setQuery] = react.useState("");
-      const [path, setPath] = react.useState("");
+      const [query, setQuery] = react.useState("");      // npm pkg name or github owner/repo
+      const [path, setPath] = react.useState("");        // local/claude/codex path override
+      const [ref, setRef] = react.useState("");           // github ref
       const [results, setResults] = react.useState(null);
       const [loading, setLoading] = react.useState(false);
       const [auditMap, setAuditMap] = react.useState({});
+
+      const buildSearchUrl = () => {
+        let url = "/api/skill-fusion/discover?source=" + mode;
+        if (mode === "npm") url += "&name=" + encodeURIComponent(query);
+        else if (mode === "github") {
+          url += "&repo=" + encodeURIComponent(query);
+          if (ref) url += "&ref=" + encodeURIComponent(ref);
+        } else {
+          if (path) url += "&path=" + encodeURIComponent(path);
+        }
+        return url;
+      };
 
       const doSearch = async () => {
         setLoading(true);
         setResults(null);
         setAuditMap({});
         try {
-          let url = "/api/skill-fusion/discover?source=" + mode;
-          if (mode === "npm") url += "&name=" + encodeURIComponent(query);
-          else url += "&path=" + encodeURIComponent(path);
-          const res = await fetch(url);
+          const res = await fetch(buildSearchUrl());
           const data = await res.json();
           if (data.ok) setResults(data.candidates);
           else setResults([]);
@@ -161,30 +186,53 @@ window.__ModuleLoader__.load({
         setLoading(false);
       };
 
+      const buildAuditUrl = (name) => {
+        let url = `/api/skill-fusion/audit?source=${mode}&name=${encodeURIComponent(name)}`;
+        if (mode === "npm") url += "&name=" + encodeURIComponent(query);
+        else if (mode === "github") {
+          url = `/api/skill-fusion/audit?source=github&repo=${encodeURIComponent(query)}&name=${encodeURIComponent(name)}`;
+          if (ref) url += "&ref=" + encodeURIComponent(ref);
+        } else {
+          if (path) url += "&path=" + encodeURIComponent(path);
+        }
+        return url;
+      };
+
       const doAudit = async (name) => {
-        const res = await fetch(`/api/skill-fusion/audit?source=${mode}&${mode === "npm" ? "name=" : "path="}${encodeURIComponent(mode === "npm" ? query : path)}&name=${encodeURIComponent(name)}`);
+        const res = await fetch(buildAuditUrl(name));
         const data = await res.json();
         setAuditMap(prev => ({ ...prev, [name]: data }));
       };
 
       const doActivate = async (name) => {
-        const body = mode === "npm"
-          ? { sourceKind: "npm", sourceRef: query, name }
-          : { sourceKind: "local", sourceRef: path, name };
+        let body;
+        if (mode === "npm") body = { sourceKind: "npm", sourceRef: query, name };
+        else if (mode === "github") body = { sourceKind: "github", sourceRef: `${query}@${ref || "main"}`, name };
+        else if (mode === "local") body = { sourceKind: "local", sourceRef: path, name };
+        else if (mode === "claude") body = { sourceKind: "claude", sourceRef: path || null, name };
+        else if (mode === "codex") body = { sourceKind: "codex", sourceRef: path || null, name };
         const res = await fetch("/api/skill-fusion/activate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
         const data = await res.json();
         if (data.ok) { setResults(prev => prev.filter(c => c.name !== name)); }
         return data;
       };
 
+      const inputVal = mode === "npm" || mode === "github" ? query : path;
+      const onInput = e => mode === "npm" || mode === "github" ? setQuery(e.currentTarget.value) : setPath(e.currentTarget.value);
+      const placeholder = mode === "npm" ? t("npmPlaceholder")
+        : mode === "github" ? t("githubPlaceholder")
+        : mode === "local" ? t("localPlaceholder")
+        : mode === "claude" ? t("claudePlaceholder")
+        : t("codexPlaceholder");
+
       return react.createElement("div", { style: s.section },
         react.createElement("p", { style: s.intro }, t("intro")),
         react.createElement("div", { style: s.tabs },
-          react.createElement("button", { style: s.tabBtn(mode === "npm"), onClick: () => setMode("npm") }, "npm"),
-          react.createElement("button", { style: s.tabBtn(mode === "local"), onClick: () => setMode("local") }, t("local"))
+          ...SOURCES.map(src => react.createElement("button", { key: src, style: s.tabBtn(mode === src), onClick: () => setMode(src) }, t(src)))
         ),
         react.createElement("div", { style: { display: "flex", gap: "8px" } },
-          react.createElement("input", { style: s.input, value: mode === "npm" ? query : path, onChange: e => mode === "npm" ? setQuery(e.currentTarget.value) : setPath(e.currentTarget.value), placeholder: mode === "npm" ? t("npmPlaceholder") : t("localPlaceholder") }),
+          react.createElement("input", { style: s.input, value: inputVal, onChange: onInput, placeholder }),
+          mode === "github" ? react.createElement("input", { style: Object.assign({}, s.input, { flex: "0 0 120px" }), value: ref, onChange: e => setRef(e.currentTarget.value), placeholder: t("refPlaceholder") }) : null,
           react.createElement("button", { style: s.btn(true), onClick: doSearch }, t("browse"))
         ),
         loading ? react.createElement("p", { style: s.intro }, t("loading")) : null,
