@@ -107,3 +107,36 @@ test("GET /api/skill-fusion/discover?source=market returns ranked results", asyn
     globalThis.fetch = origFetch;
   }
 });
+
+test("GET /api/skill-fusion/discover?source=market with empty/missing q returns featured homepage", async () => {
+  const home = freshHome();
+  const routes = skillFusionRoutes(home);
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const repoMeta = url.match(/api\.github\.com\/repos\/([^/]+\/[^/]+)$/);
+    if (repoMeta) {
+      return { ok: true, json: async () => ({ full_name: repoMeta[1], stargazers_count: 99999, description: "d", html_url: "u", default_branch: "main" }) };
+    }
+    if (url.includes("search/repositories")) {
+      return { ok: true, json: async () => ({ items: [
+        { full_name: "trending/one", stargazers_count: 5000, description: "t", html_url: "u", default_branch: "main" },
+      ] }) };
+    }
+    if (url.includes("/-/v1/search")) return { ok: true, json: async () => ({ objects: [] }) };
+    return { ok: false, status: 404 };
+  };
+  try {
+    const r = routes.find(x => x.path === "/api/skill-fusion/discover");
+    // Both q= (empty) and missing q must trigger searchMarket → featured homepage
+    for (const url of ["/api/skill-fusion/discover?source=market&q=", "/api/skill-fusion/discover?source=market"]) {
+      const res = mockRes();
+      await r.handler(mockReq("GET", url), res);
+      const payload = JSON.parse(res.result.body);
+      assert.equal(payload.ok, true);
+      assert.ok(payload.candidates.length > 0, `featured homepage should return results for ${url}`);
+      assert.ok(payload.candidates[0].rank > 0, "featured results should be ranked");
+    }
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
