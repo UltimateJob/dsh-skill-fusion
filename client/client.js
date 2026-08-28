@@ -18,6 +18,7 @@ window.__ModuleLoader__.load({
       codex: "Codex",
       market: "Market",
       search: "Search",
+      allPlatforms: "Featured",
       inspect: "Find skills",
       inspectRepo: "Find skills inside",
       rank: "Rank",
@@ -74,6 +75,7 @@ window.__ModuleLoader__.load({
       codex: "Codex",
       market: "市场",
       search: "搜索",
+      allPlatforms: "精选",
       inspect: "发现技能",
       inspectRepo: "查找其中技能",
       rank: "排名",
@@ -217,6 +219,7 @@ window.__ModuleLoader__.load({
       const [expanded, setExpanded] = react.useState({});  // { repoName: [skillCandidates] }
       const [loading, setLoading] = react.useState(false);
       const [auditMap, setAuditMap] = react.useState({});
+      const [platform, setPlatform] = react.useState(""); // market platform chip filter
 
       const doSearch = async (qOverride) => {
         const effectiveQuery = qOverride !== undefined ? qOverride : query;
@@ -241,14 +244,30 @@ window.__ModuleLoader__.load({
         setLoading(false);
       };
 
-      // Auto-load the featured market homepage the first time the market tab shows.
-      const autoLoaded = react.useRef(false);
+      // Clear stale results and load sensible defaults whenever the source tab changes.
+      // market → featured homepage; claude/codex → scan default dirs immediately.
       react.useEffect(() => {
-        if (mode === "market" && !autoLoaded.current) {
-          autoLoaded.current = true;
-          doSearch("");
-        }
+        setResults(null);
+        setExpanded({});
+        setAuditMap({});
+        setPlatform("");
+        setMarketMode(mode === "market");
+        if (mode === "market") doSearch("");
+        else if (mode === "claude" || mode === "codex") doSearch();
       }, [mode]);
+
+      // Platform filter chips inside the market tab (find skills by ecosystem).
+      const PLATFORMS = [
+        { key: "", label: t("allPlatforms") },
+        { key: "claude", label: "Claude" },
+        { key: "codex", label: "Codex" },
+        { key: "agent", label: "Agent" },
+      ];
+      const pickPlatform = (key) => {
+        setPlatform(key);
+        setQuery(key);
+        doSearch(key);
+      };
 
       const doInspect = async (item) => {
         try {
@@ -307,6 +326,9 @@ window.__ModuleLoader__.load({
         react.createElement("div", { style: s.tabs },
           ...SOURCES.map(src => react.createElement("button", { key: src, style: s.tabBtn(mode === src), onClick: () => setMode(src) }, t(src)))
         ),
+        mode === "market" ? react.createElement("div", { style: s.tabs },
+          ...PLATFORMS.map(p => react.createElement("button", { key: p.key, style: s.tabBtn(platform === p.key), onClick: () => pickPlatform(p.key) }, p.label))
+        ) : null,
         react.createElement("div", { style: { display: "flex", gap: "8px" } },
           react.createElement("input", { style: s.input, value: inputVal, onChange: onInput, placeholder, onKeyDown: e => { if (e.key === "Enter") doSearch(); } }),
           mode === "github" ? react.createElement("input", { style: Object.assign({}, s.input, { flex: "0 0 120px" }), value: ref, onChange: e => setRef(e.currentTarget.value), placeholder: t("refPlaceholder") }) : null,
