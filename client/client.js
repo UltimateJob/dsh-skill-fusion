@@ -19,6 +19,8 @@ window.__ModuleLoader__.load({
       market: "Market",
       search: "Search",
       allPlatforms: "Featured",
+      loadMore: "Load more",
+      noMore: "No more results",
       inspect: "Find skills",
       inspectRepo: "Find skills inside",
       rank: "Rank",
@@ -76,6 +78,8 @@ window.__ModuleLoader__.load({
       market: "市场",
       search: "搜索",
       allPlatforms: "精选",
+      loadMore: "加载更多",
+      noMore: "没有更多了",
       inspect: "发现技能",
       inspectRepo: "查找其中技能",
       rank: "排名",
@@ -220,16 +224,20 @@ window.__ModuleLoader__.load({
       const [loading, setLoading] = react.useState(false);
       const [auditMap, setAuditMap] = react.useState({});
       const [platform, setPlatform] = react.useState(""); // market platform chip filter
+      const [page, setPage] = react.useState(1);           // market pagination
+      const [hasMore, setHasMore] = react.useState(false);
+      const loadingRef = react.useRef(false);
+      const sentinelRef = react.useRef(null);
 
-      const doSearch = async (qOverride) => {
+      const doSearch = async (qOverride, { append = false } = {}) => {
         const effectiveQuery = qOverride !== undefined ? qOverride : query;
+        const nextPage = append ? page + 1 : 1;
         setLoading(true);
-        setResults(null);
-        setAuditMap({});
-        setExpanded({});
+        loadingRef.current = true;
+        if (!append) { setResults(null); setAuditMap({}); setExpanded({}); }
         try {
           let url;
-          if (mode === "market") url = `/api/skill-fusion/discover?source=market&q=${encodeURIComponent(effectiveQuery)}`;
+          if (mode === "market") url = `/api/skill-fusion/discover?source=market&q=${encodeURIComponent(effectiveQuery)}&page=${nextPage}`;
           else if (mode === "npm") url = `/api/skill-fusion/discover?source=npm&name=${encodeURIComponent(query)}`;
           else if (mode === "github") url = `/api/skill-fusion/discover?source=github&repo=${encodeURIComponent(query)}&ref=${encodeURIComponent(ref || "main")}`;
           else if (mode === "local") url = `/api/skill-fusion/discover?source=local&path=${encodeURIComponent(path)}`;
@@ -237,12 +245,34 @@ window.__ModuleLoader__.load({
           else url = `/api/skill-fusion/discover?source=codex${path ? "&path=" + encodeURIComponent(path) : ""}`;
           const res = await fetch(url);
           const data = await res.json();
-          if (data.ok) setResults(data.candidates);
-          else setResults([]);
+          if (data.ok) {
+            setPage(nextPage);
+            if (mode === "market") setHasMore(!!data.hasMore);
+            if (append) {
+              setResults(prev => {
+                const seen = new Set((prev || []).map(c => c.name));
+                return [...(prev || []), ...data.candidates.filter(c => !seen.has(c.name))];
+              });
+            } else {
+              setResults(data.candidates);
+            }
+          } else if (!append) { setResults([]); if (mode === "market") setHasMore(false); }
           setMarketMode(mode === "market");
-        } catch { setResults([]); setMarketMode(false); }
+        } catch { if (!append) { setResults([]); setHasMore(false); } setMarketMode(mode === "market"); }
         setLoading(false);
+        loadingRef.current = false;
       };
+
+      // Infinite scroll: when the bottom sentinel enters view, load the next page.
+      react.useEffect(() => {
+        if (!marketMode || !hasMore || !sentinelRef.current) return;
+        const el = sentinelRef.current;
+        const obs = new IntersectionObserver((entries) => {
+          if (entries[0].isIntersecting && !loadingRef.current) doSearch(undefined, { append: true });
+        }, { rootMargin: "300px" });
+        obs.observe(el);
+        return () => obs.disconnect();
+      }, [marketMode, hasMore, loading, page]);
 
       // Clear stale results and load sensible defaults whenever the source tab changes.
       // market → featured homepage; claude/codex → scan default dirs immediately.
@@ -251,6 +281,8 @@ window.__ModuleLoader__.load({
         setExpanded({});
         setAuditMap({});
         setPlatform("");
+        setPage(1);
+        setHasMore(false);
         setMarketMode(mode === "market");
         if (mode === "market") doSearch("");
         else if (mode === "claude" || mode === "codex") doSearch();
@@ -340,6 +372,11 @@ window.__ModuleLoader__.load({
           marketMode
             ? results.map(item => react.createElement(MarketCard, { key: item.name, item, t, onInspect: doInspect, expanded: expanded[item.name], onActivate: doActivate, onAudit: doAudit, auditMap }))
             : results.map(c => react.createElement(SkillCard, { key: c.name, skill: c, t, onAudit: () => doAudit(c), onActivate: () => doActivate(c), auditResult: auditMap[c.name] }))
+        ) : null,
+        marketMode && results && results.length > 0 ? react.createElement("div", { ref: sentinelRef, style: { textAlign: "center", padding: "12px 0" } },
+          loading ? react.createElement("span", { style: s.meta }, t("loading"))
+            : hasMore ? react.createElement("button", { style: s.btn(false), onClick: () => doSearch(undefined, { append: true }) }, t("loadMore"))
+            : react.createElement("span", { style: s.meta }, t("noMore"))
         ) : null
       );
     }
