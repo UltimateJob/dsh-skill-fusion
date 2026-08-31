@@ -21,6 +21,19 @@ window.__ModuleLoader__.load({
       allPlatforms: "Featured",
       loadMore: "Load more",
       noMore: "No more results",
+      enable: "Enable",
+      disable: "Disable",
+      enabledBadge: "enabled",
+      disabledBadge: "disabled",
+      managedBadge: "managed",
+      refresh: "Refresh",
+      refreshHint: "Bypass the local cache and re-fetch from the network",
+      localIntro: "Skills installed in DeepSeek Harness (~/.dsh/skills). Enable/disable any skill; managed ones (installed via Skill Forge) can also be frozen, updated, rolled back, or uninstalled.",
+      emptyLocal: "No local skills yet. Install some from the Market tab.",
+      about: "About",
+      langZh: "中文",
+      langEn: "EN",
+      noAbout: "No README found for this item.",
       inspect: "Find skills",
       inspectRepo: "Find skills inside",
       rank: "Rank",
@@ -80,6 +93,19 @@ window.__ModuleLoader__.load({
       allPlatforms: "精选",
       loadMore: "加载更多",
       noMore: "没有更多了",
+      enable: "启用",
+      disable: "停用",
+      enabledBadge: "已启用",
+      disabledBadge: "已停用",
+      managedBadge: "托管",
+      refresh: "刷新",
+      refreshHint: "跳过本地缓存,重新联网获取",
+      localIntro: "DeepSeek Harness 本地已安装的技能(~/.dsh/skills)。可启用/停用任意技能;托管技能(经技能熔炉安装)还可冻结、更新、回滚、卸载。",
+      emptyLocal: "还没有本地技能。去市场 tab 安装一些吧。",
+      about: "简介",
+      langZh: "中文",
+      langEn: "EN",
+      noAbout: "未找到此项目的 README 介绍。",
       inspect: "发现技能",
       inspectRepo: "查找其中技能",
       rank: "排名",
@@ -144,6 +170,7 @@ window.__ModuleLoader__.load({
       rankBadge: { fontSize: "11px", padding: "0 8px", borderRadius: "999px", background: "color-mix(in srgb, var(--dsw-alias-state-success-primary, #16a34a) 14%, transparent)", color: "var(--dsw-alias-state-success-primary, #16a34a)", fontWeight: 600, whiteSpace: "nowrap" },
       srcBadge: { fontSize: "11px", padding: "0 8px", borderRadius: "999px", background: "color-mix(in srgb, var(--dsw-alias-border-l2, #888) 20%, transparent)", color: "var(--dsw-alias-label-secondary)", whiteSpace: "nowrap" },
       link: { color: "var(--dsw-alias-accent, #4f8cff)", fontSize: "12px", textDecoration: "none" },
+      aboutBox: { border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "6px", padding: "10px", fontSize: "12px", lineHeight: "1.6", whiteSpace: "pre-wrap", wordBreak: "break-word", color: "var(--dsw-alias-label-secondary)", background: "var(--dsw-alias-bg-layer-1)", maxHeight: "240px", overflowY: "auto" },
     };
 
     const PASS_COLOR = "var(--dsw-alias-state-success-primary, #16a34a)";
@@ -151,14 +178,18 @@ window.__ModuleLoader__.load({
     const BLOCK_COLOR = "var(--dsw-alias-state-error-primary, #dc2626)";
     function verdictColor(v) { return v === "pass" ? PASS_COLOR : v === "warn" ? WARN_COLOR : BLOCK_COLOR; }
 
-    function SkillCard({ skill, t, onAudit, onActivate, onUninstall, onFreeze, onUnfreeze, onUpdate, onRollback, auditResult }) {
+    function SkillCard({ skill, t, onAudit, onActivate, onUninstall, onFreeze, onUnfreeze, onUpdate, onRollback, onToggle, onAbout, about, auditResult }) {
       const verdict = auditResult?.verdict;
       const isFrozen = skill.status === "frozen" || skill.frozenVersion != null;
       return react.createElement("div", { style: s.card },
-        react.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+        react.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" } },
           react.createElement("strong", { style: s.cardTitle }, skill.name),
-          verdict ? react.createElement("span", { style: s.badge(verdictColor(verdict)) }, t(verdict)) : null,
-          isFrozen ? react.createElement("span", { style: s.frozenBadge }, t("frozen") + (skill.frozenVersion ? ` @${skill.frozenVersion}` : "")) : null
+          react.createElement("div", { style: { display: "flex", gap: "6px", alignItems: "center" } },
+            verdict ? react.createElement("span", { style: s.badge(verdictColor(verdict)) }, t(verdict)) : null,
+            isFrozen ? react.createElement("span", { style: s.frozenBadge }, t("frozen") + (skill.frozenVersion ? ` @${skill.frozenVersion}` : "")) : null,
+            skill.enabled !== undefined ? react.createElement("span", { style: s.badge(skill.enabled ? PASS_COLOR : "var(--dsw-alias-label-tertiary)") }, skill.enabled ? t("enabledBadge") : t("disabledBadge")) : null,
+            skill.managed ? react.createElement("span", { style: s.srcBadge }, t("managedBadge")) : null
+          )
         ),
         react.createElement("p", { style: s.cardDesc }, skill.description),
         react.createElement("p", { style: s.meta },
@@ -170,7 +201,15 @@ window.__ModuleLoader__.load({
         auditResult?.flags?.length > 0 ? react.createElement("pre", { style: s.auditBox },
           auditResult.flags.map(f => `${f.severity}: ${f.kind}${f.line ? ` (line ${f.line})` : ""}`).join("\n")
         ) : auditResult ? react.createElement("p", { style: s.meta }, t("noFlags")) : null,
+        about !== undefined ? (about
+          ? react.createElement("div", null,
+              react.createElement("span", { style: s.srcBadge }, about.lang === "zh" ? t("langZh") : t("langEn")),
+              react.createElement("div", { style: s.aboutBox }, about.text)
+            )
+          : react.createElement("p", { style: s.meta }, t("noAbout"))) : null,
         react.createElement("div", { style: s.actions },
+          onToggle ? react.createElement("button", { style: s.btn(!skill.enabled), onClick: onToggle }, skill.enabled ? t("disable") : t("enable")) : null,
+          onAbout ? react.createElement("button", { style: s.btn(false), onClick: onAbout }, t("about")) : null,
           onAudit ? react.createElement("button", { style: s.btn(false), onClick: onAudit }, t("audit")) : null,
           onActivate ? react.createElement("button", { style: s.btn(true), onClick: onActivate }, t("activate")) : null,
           onFreeze ? react.createElement("button", { style: s.btn(false), onClick: onFreeze }, t("freeze")) : null,
@@ -189,14 +228,41 @@ window.__ModuleLoader__.load({
         : react.createElement("span", { style: s.rankBadge }, `${t("popularity")} ${item.rankLabel}`);
       const srcBadge = react.createElement("span", { style: s.srcBadge }, item.sourceMarket === "github" ? "GitHub" : "npm");
       const skillsInside = expanded ? expanded.filter(Boolean) : [];
+      const [about, setAbout] = react.useState(undefined);       // repo-level README (zh-preferred)
+      const [skillAbout, setSkillAbout] = react.useState({});    // per-skill localized SKILL.md
+      const loadAbout = async () => {
+        setAbout(undefined);
+        try {
+          const url = item.sourceMarket === "github"
+            ? `/api/skill-fusion/readme?source=github&repo=${encodeURIComponent(item.name)}&ref=${encodeURIComponent(item.ref || "main")}`
+            : `/api/skill-fusion/readme?source=npm&name=${encodeURIComponent(item.name)}`;
+          const data = await (await fetch(url)).json();
+          setAbout(data.ok ? data : null);
+        } catch { setAbout(null); }
+      };
+      const loadSkillAbout = async (sk) => {
+        if (item.sourceMarket !== "github") return;
+        try {
+          const url = `/api/skill-fusion/readme?source=github&repo=${encodeURIComponent(item.name)}&ref=${encodeURIComponent(item.ref || "main")}&path=${encodeURIComponent(sk.skillDir || "")}`;
+          const data = await (await fetch(url)).json();
+          setSkillAbout(prev => ({ ...prev, [sk.name]: data.ok ? data : null }));
+        } catch { setSkillAbout(prev => ({ ...prev, [sk.name]: null })); }
+      };
       return react.createElement("div", { style: s.card },
         react.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" } },
           react.createElement("strong", { style: s.cardTitle }, item.name),
           react.createElement("div", { style: { display: "flex", gap: "6px", alignItems: "center" } }, srcBadge, rankBadge)
         ),
         react.createElement("p", { style: s.cardDesc }, item.description || ""),
+        about !== undefined ? (about
+          ? react.createElement("div", null,
+              react.createElement("span", { style: s.srcBadge }, about.lang === "zh" ? t("langZh") : t("langEn")),
+              react.createElement("div", { style: s.aboutBox }, about.text)
+            )
+          : react.createElement("p", { style: s.meta }, t("noAbout"))) : null,
         react.createElement("div", { style: s.actions },
           item.url ? react.createElement("a", { href: item.url, target: "_blank", rel: "noreferrer", style: s.link }, t("openRepo")) : null,
+          react.createElement("button", { style: s.btn(false), onClick: loadAbout }, t("about")),
           react.createElement("button", { style: s.btn(false), onClick: () => onInspect(item) },
             skillsInside.length > 0 ? `${t("inspect")} (${skillsInside.length})` : t("inspect")
           )
@@ -206,48 +272,42 @@ window.__ModuleLoader__.load({
             key: sk.name, skill: sk, t,
             onAudit: () => onAudit(sk, item),
             onActivate: () => onActivate(sk, item),
+            onAbout: item.sourceMarket === "github" ? () => loadSkillAbout(sk) : undefined,
+            about: skillAbout[sk.name],
             auditResult: auditMap[item.name + ":" + sk.name],
           }))
         ) : expanded && expanded.length === 0 ? react.createElement("p", { style: s.meta }, `${t("noSkillsIn")} ${item.name}`) : null
       );
     }
 
+    // Market view: search the GitHub/npm skill market by keyword or ecosystem
+    // chips, ranked by stars/popularity, with infinite scroll and a local cache
+    // on the server (24h TTL; 刷新 bypasses it).
     function DiscoverView({ t }) {
-      const SOURCES = ["market", "npm", "github", "local", "claude", "codex"];
-      const [mode, setMode] = react.useState("market");
-      const [query, setQuery] = react.useState("");      // market keyword / npm pkg / github repo
-      const [path, setPath] = react.useState("");        // local/claude/codex path override
-      const [ref, setRef] = react.useState("");           // github ref
+      const [query, setQuery] = react.useState("");
       const [results, setResults] = react.useState(null);
-      const [marketMode, setMarketMode] = react.useState(false);
       const [expanded, setExpanded] = react.useState({});  // { repoName: [skillCandidates] }
       const [loading, setLoading] = react.useState(false);
       const [auditMap, setAuditMap] = react.useState({});
-      const [platform, setPlatform] = react.useState(""); // market platform chip filter
-      const [page, setPage] = react.useState(1);           // market pagination
+      const [platform, setPlatform] = react.useState(""); // ecosystem chip filter
+      const [page, setPage] = react.useState(1);
       const [hasMore, setHasMore] = react.useState(false);
       const loadingRef = react.useRef(false);
       const sentinelRef = react.useRef(null);
 
-      const doSearch = async (qOverride, { append = false } = {}) => {
+      const doSearch = async (qOverride, { append = false, fresh = false } = {}) => {
         const effectiveQuery = qOverride !== undefined ? qOverride : query;
         const nextPage = append ? page + 1 : 1;
         setLoading(true);
         loadingRef.current = true;
         if (!append) { setResults(null); setAuditMap({}); setExpanded({}); }
         try {
-          let url;
-          if (mode === "market") url = `/api/skill-fusion/discover?source=market&q=${encodeURIComponent(effectiveQuery)}&page=${nextPage}`;
-          else if (mode === "npm") url = `/api/skill-fusion/discover?source=npm&name=${encodeURIComponent(query)}`;
-          else if (mode === "github") url = `/api/skill-fusion/discover?source=github&repo=${encodeURIComponent(query)}&ref=${encodeURIComponent(ref || "main")}`;
-          else if (mode === "local") url = `/api/skill-fusion/discover?source=local&path=${encodeURIComponent(path)}`;
-          else if (mode === "claude") url = `/api/skill-fusion/discover?source=claude${path ? "&path=" + encodeURIComponent(path) : ""}`;
-          else url = `/api/skill-fusion/discover?source=codex${path ? "&path=" + encodeURIComponent(path) : ""}`;
+          const url = `/api/skill-fusion/discover?source=market&q=${encodeURIComponent(effectiveQuery)}&page=${nextPage}${fresh ? "&fresh=1" : ""}`;
           const res = await fetch(url);
           const data = await res.json();
           if (data.ok) {
             setPage(nextPage);
-            if (mode === "market") setHasMore(!!data.hasMore);
+            setHasMore(!!data.hasMore);
             if (append) {
               setResults(prev => {
                 const seen = new Set((prev || []).map(c => c.name));
@@ -256,43 +316,32 @@ window.__ModuleLoader__.load({
             } else {
               setResults(data.candidates);
             }
-          } else if (!append) { setResults([]); if (mode === "market") setHasMore(false); }
-          setMarketMode(mode === "market");
-        } catch { if (!append) { setResults([]); setHasMore(false); } setMarketMode(mode === "market"); }
+          } else if (!append) { setResults([]); setHasMore(false); }
+        } catch { if (!append) { setResults([]); setHasMore(false); } }
         setLoading(false);
         loadingRef.current = false;
       };
 
+      // Featured homepage on mount.
+      react.useEffect(() => { doSearch(""); }, []);
+
       // Infinite scroll: when the bottom sentinel enters view, load the next page.
       react.useEffect(() => {
-        if (!marketMode || !hasMore || !sentinelRef.current) return;
+        if (!hasMore || !sentinelRef.current) return;
         const el = sentinelRef.current;
         const obs = new IntersectionObserver((entries) => {
           if (entries[0].isIntersecting && !loadingRef.current) doSearch(undefined, { append: true });
         }, { rootMargin: "300px" });
         obs.observe(el);
         return () => obs.disconnect();
-      }, [marketMode, hasMore, loading, page]);
+      }, [hasMore, loading, page]);
 
-      // Clear stale results and load sensible defaults whenever the source tab changes.
-      // market → featured homepage; claude/codex → scan default dirs immediately.
-      react.useEffect(() => {
-        setResults(null);
-        setExpanded({});
-        setAuditMap({});
-        setPlatform("");
-        setPage(1);
-        setHasMore(false);
-        setMarketMode(mode === "market");
-        if (mode === "market") doSearch("");
-        else if (mode === "claude" || mode === "codex") doSearch();
-      }, [mode]);
-
-      // Platform filter chips inside the market tab (find skills by ecosystem).
+      // Ecosystem chips: find skills by platform (claude/codex/github/agent).
       const PLATFORMS = [
         { key: "", label: t("allPlatforms") },
         { key: "claude", label: "Claude" },
         { key: "codex", label: "Codex" },
+        { key: "github", label: "GitHub" },
         { key: "agent", label: "Agent" },
       ];
       const pickPlatform = (key) => {
@@ -315,14 +364,7 @@ window.__ModuleLoader__.load({
       const doAudit = async (sk, item) => {
         let url;
         if (item && item.sourceMarket === "github") url = `/api/skill-fusion/audit?source=github&repo=${encodeURIComponent(item.name)}&ref=${encodeURIComponent(item.ref || "main")}&name=${encodeURIComponent(sk.name)}`;
-        else if (item && item.sourceMarket === "npm") url = `/api/skill-fusion/audit?source=npm&name=${encodeURIComponent(sk.name)}`;
-        else {
-          url = `/api/skill-fusion/audit?source=${mode}`;
-          if (mode === "npm") url += `&name=${encodeURIComponent(sk.name)}`;
-          else if (mode === "github") url += `&repo=${encodeURIComponent(query)}&ref=${encodeURIComponent(ref || "main")}&name=${encodeURIComponent(sk.name)}`;
-          else if (path) url += `&path=${encodeURIComponent(path)}`;
-          url += `&name=${encodeURIComponent(sk.name)}`;
-        }
+        else url = `/api/skill-fusion/audit?source=npm&name=${encodeURIComponent(sk.name)}`;
         const res = await fetch(url);
         const data = await res.json();
         const key = item ? `${item.name}:${sk.name}` : sk.name;
@@ -332,48 +374,31 @@ window.__ModuleLoader__.load({
       const doActivate = async (sk, item) => {
         let body;
         if (item && item.sourceMarket === "github") body = { sourceKind: "github", sourceRef: `${item.name}@${item.ref || "main"}`, name: sk.name };
-        else if (item && item.sourceMarket === "npm") body = { sourceKind: "npm", sourceRef: item.name, name: sk.name };
-        else if (mode === "npm") body = { sourceKind: "npm", sourceRef: query, name: sk.name };
-        else if (mode === "github") body = { sourceKind: "github", sourceRef: `${query}@${ref || "main"}`, name: sk.name };
-        else if (mode === "local") body = { sourceKind: "local", sourceRef: path, name: sk.name };
-        else if (mode === "claude") body = { sourceKind: "claude", sourceRef: path || null, name: sk.name };
-        else body = { sourceKind: "codex", sourceRef: path || null, name: sk.name };
+        else body = { sourceKind: "npm", sourceRef: item.name, name: sk.name };
         const res = await fetch("/api/skill-fusion/activate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
         const data = await res.json();
-        if (data.ok) setResults(prev => (prev || []).filter(c => c.name !== sk.name));
+        if (data.ok && expanded[item.name]) {
+          setExpanded(prev => ({ ...prev, [item.name]: prev[item.name].filter(c => c.name !== sk.name) }));
+        }
         return data;
       };
-
-      const inputVal = mode === "market" || mode === "npm" || mode === "github" ? query : path;
-      const onInput = e => (mode === "market" || mode === "npm" || mode === "github") ? setQuery(e.currentTarget.value) : setPath(e.currentTarget.value);
-      const placeholder = mode === "market" ? t("marketPlaceholder")
-        : mode === "npm" ? t("npmPlaceholder")
-        : mode === "github" ? t("githubPlaceholder")
-        : mode === "local" ? t("localPlaceholder")
-        : mode === "claude" ? t("claudePlaceholder")
-        : t("codexPlaceholder");
 
       return react.createElement("div", { style: s.section },
         react.createElement("p", { style: s.intro }, t("intro")),
         react.createElement("div", { style: s.tabs },
-          ...SOURCES.map(src => react.createElement("button", { key: src, style: s.tabBtn(mode === src), onClick: () => setMode(src) }, t(src)))
-        ),
-        mode === "market" ? react.createElement("div", { style: s.tabs },
           ...PLATFORMS.map(p => react.createElement("button", { key: p.key, style: s.tabBtn(platform === p.key), onClick: () => pickPlatform(p.key) }, p.label))
-        ) : null,
-        react.createElement("div", { style: { display: "flex", gap: "8px" } },
-          react.createElement("input", { style: s.input, value: inputVal, onChange: onInput, placeholder, onKeyDown: e => { if (e.key === "Enter") doSearch(); } }),
-          mode === "github" ? react.createElement("input", { style: Object.assign({}, s.input, { flex: "0 0 120px" }), value: ref, onChange: e => setRef(e.currentTarget.value), placeholder: t("refPlaceholder") }) : null,
-          react.createElement("button", { style: s.btn(true), onClick: doSearch }, mode === "market" ? t("search") : t("browse"))
         ),
-        loading ? react.createElement("p", { style: s.intro }, t("loading")) : null,
-        results !== null && results.length === 0 ? react.createElement("p", { style: s.intro }, marketMode ? t("emptyMarket") : t("empty")) : null,
+        react.createElement("div", { style: { display: "flex", gap: "8px" } },
+          react.createElement("input", { style: s.input, value: query, onChange: e => setQuery(e.currentTarget.value), placeholder: t("marketPlaceholder"), onKeyDown: e => { if (e.key === "Enter") { setPlatform(""); doSearch(); } } }),
+          react.createElement("button", { style: s.btn(true), onClick: () => { setPlatform(""); doSearch(); } }, t("search")),
+          react.createElement("button", { style: s.btn(false), onClick: () => doSearch(undefined, { fresh: true }), title: t("refreshHint") }, t("refresh"))
+        ),
+        loading && !results ? react.createElement("p", { style: s.intro }, t("loading")) : null,
+        results !== null && results.length === 0 && !loading ? react.createElement("p", { style: s.intro }, t("emptyMarket")) : null,
         results ? react.createElement("div", { style: s.cards },
-          marketMode
-            ? results.map(item => react.createElement(MarketCard, { key: item.name, item, t, onInspect: doInspect, expanded: expanded[item.name], onActivate: doActivate, onAudit: doAudit, auditMap }))
-            : results.map(c => react.createElement(SkillCard, { key: c.name, skill: c, t, onAudit: () => doAudit(c), onActivate: () => doActivate(c), auditResult: auditMap[c.name] }))
+          results.map(item => react.createElement(MarketCard, { key: item.name, item, t, onInspect: doInspect, expanded: expanded[item.name], onActivate: doActivate, onAudit: doAudit, auditMap }))
         ) : null,
-        marketMode && results && results.length > 0 ? react.createElement("div", { ref: sentinelRef, style: { textAlign: "center", padding: "12px 0" } },
+        results && results.length > 0 ? react.createElement("div", { ref: sentinelRef, style: { textAlign: "center", padding: "12px 0" } },
           loading ? react.createElement("span", { style: s.meta }, t("loading"))
             : hasMore ? react.createElement("button", { style: s.btn(false), onClick: () => doSearch(undefined, { append: true }) }, t("loadMore"))
             : react.createElement("span", { style: s.meta }, t("noMore"))
@@ -381,13 +406,15 @@ window.__ModuleLoader__.load({
       );
     }
 
+    // Local view: all skills DSH has locally (~/.dsh/skills), with enable/disable
+    // management for every skill and lifecycle actions for fusion-managed ones.
     function ActivatedView({ t }) {
       const [skills, setSkills] = react.useState(null);
       const [loading, setLoading] = react.useState(true);
       const [exportMsg, setExportMsg] = react.useState(null);
       const fetchList = async () => {
         try {
-          const res = await fetch("/api/skill-fusion/list");
+          const res = await fetch("/api/skill-fusion/local");
           const data = await res.json();
           if (data.ok) setSkills(data.skills);
         } catch {}
@@ -395,33 +422,24 @@ window.__ModuleLoader__.load({
       };
       react.useEffect(() => { fetchList(); }, []);
 
-      const doUninstall = async (name) => {
-        const res = await fetch("/api/skill-fusion/uninstall", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }) });
-        const data = await res.json();
+      const post = async (path, body) => {
+        const res = await fetch(`/api/skill-fusion/${path}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+        return res.json();
+      };
+      const doToggle = async (sk) => {
+        const data = await post("toggle", { name: sk.name, enabled: !sk.enabled });
         if (data.ok) fetchList();
       };
+      const doUninstall = async (name) => { const data = await post("uninstall", { name }); if (data.ok) fetchList(); };
       const doFreeze = async (name) => {
         const version = prompt("Version to freeze at (e.g. 1.0.0):");
         if (!version) return;
-        const res = await fetch("/api/skill-fusion/freeze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, version }) });
-        const data = await res.json();
+        const data = await post("freeze", { name, version });
         if (data.ok) fetchList();
       };
-      const doUnfreeze = async (name) => {
-        const res = await fetch("/api/skill-fusion/unfreeze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }) });
-        const data = await res.json();
-        if (data.ok) fetchList();
-      };
-      const doUpdate = async (name) => {
-        const res = await fetch("/api/skill-fusion/update", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }) });
-        const data = await res.json();
-        if (data.ok) fetchList();
-      };
-      const doRollback = async (name) => {
-        const res = await fetch("/api/skill-fusion/rollback", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }) });
-        const data = await res.json();
-        if (data.ok) fetchList();
-      };
+      const doUnfreeze = async (name) => { const data = await post("unfreeze", { name }); if (data.ok) fetchList(); };
+      const doUpdate = async (name) => { const data = await post("update", { name }); if (data.ok) fetchList(); };
+      const doRollback = async (name) => { const data = await post("rollback", { name }); if (data.ok) fetchList(); };
       const doExport = async () => {
         const res = await fetch("/api/skill-fusion/export");
         const data = await res.json();
@@ -438,34 +456,35 @@ window.__ModuleLoader__.load({
       };
 
       return react.createElement("div", { style: s.section },
-        react.createElement("p", { style: s.intro }, t("intro")),
+        react.createElement("p", { style: s.intro }, t("localIntro")),
         react.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "center" } },
           react.createElement("button", { style: s.btn(false), onClick: doExport }, t("export")),
           exportMsg ? react.createElement("span", { style: s.meta }, exportMsg) : null
         ),
         loading ? react.createElement("p", { style: s.intro }, t("loading")) : null,
-        skills !== null && skills.length === 0 ? react.createElement("p", { style: s.intro }, t("emptyActivated")) : null,
+        skills !== null && skills.length === 0 ? react.createElement("p", { style: s.intro }, t("emptyLocal")) : null,
         skills ? react.createElement("div", { style: s.cards },
           skills.map(sk => react.createElement(SkillCard, {
             key: sk.name, skill: sk, t,
-            onUninstall: () => doUninstall(sk.name),
-            onFreeze: sk.status === "frozen" || sk.frozenVersion ? undefined : () => doFreeze(sk.name),
-            onUnfreeze: sk.status === "frozen" || sk.frozenVersion ? () => doUnfreeze(sk.name) : undefined,
-            onUpdate: () => doUpdate(sk.name),
-            onRollback: () => doRollback(sk.name),
+            onToggle: () => doToggle(sk),
+            onUninstall: sk.managed ? () => doUninstall(sk.name) : undefined,
+            onFreeze: sk.managed && !(sk.status === "frozen" || sk.frozenVersion) ? () => doFreeze(sk.name) : undefined,
+            onUnfreeze: sk.managed && (sk.status === "frozen" || sk.frozenVersion) ? () => doUnfreeze(sk.name) : undefined,
+            onUpdate: sk.managed ? () => doUpdate(sk.name) : undefined,
+            onRollback: sk.managed ? () => doRollback(sk.name) : undefined,
           }))
         ) : null
       );
     }
 
     function SkillForgeView({ t }) {
-      const [view, setView] = react.useState("discover");
+      const [view, setView] = react.useState("market");
       return react.createElement("div", { style: s.section },
         react.createElement("div", { style: s.tabs },
-          react.createElement("button", { style: s.tabBtn(view === "discover"), onClick: () => setView("discover") }, t("discover")),
-          react.createElement("button", { style: s.tabBtn(view === "activated"), onClick: () => setView("activated") }, t("activated"))
+          react.createElement("button", { style: s.tabBtn(view === "market"), onClick: () => setView("market") }, t("market")),
+          react.createElement("button", { style: s.tabBtn(view === "local"), onClick: () => setView("local") }, t("local"))
         ),
-        view === "discover" ? react.createElement(DiscoverView, { t }) : react.createElement(ActivatedView, { t })
+        view === "market" ? react.createElement(DiscoverView, { t }) : react.createElement(ActivatedView, { t })
       );
     }
 
