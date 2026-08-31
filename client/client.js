@@ -34,6 +34,13 @@ window.__ModuleLoader__.load({
       langZh: "中文",
       langEn: "EN",
       noAbout: "No README found for this item.",
+      trustVerified: "Verified",
+      trustEstablished: "Established",
+      trustCommunity: "Community",
+      trustNew: "New repo",
+      trustArchived: "Archived",
+      confirmLowTrust: "This repo has little community validation (few stars). Install anyway?",
+      confirmWarnAudit: "Audit flagged potential risks. Install anyway?",
       inspect: "Find skills",
       inspectRepo: "Find skills inside",
       rank: "Rank",
@@ -106,6 +113,13 @@ window.__ModuleLoader__.load({
       langZh: "中文",
       langEn: "EN",
       noAbout: "未找到此项目的 README 介绍。",
+      trustVerified: "社区验证",
+      trustEstablished: "成熟",
+      trustCommunity: "社区",
+      trustNew: "新仓库",
+      trustArchived: "已归档",
+      confirmLowTrust: "此仓库社区验证较少(星标低)。仍要安装吗?",
+      confirmWarnAudit: "审计发现潜在风险。仍要安装吗?",
       inspect: "发现技能",
       inspectRepo: "查找其中技能",
       rank: "排名",
@@ -177,6 +191,22 @@ window.__ModuleLoader__.load({
     const WARN_COLOR = "var(--dsw-alias-state-warning-primary, #d97706)";
     const BLOCK_COLOR = "var(--dsw-alias-state-error-primary, #dc2626)";
     function verdictColor(v) { return v === "pass" ? PASS_COLOR : v === "warn" ? WARN_COLOR : BLOCK_COLOR; }
+
+    // Community-trust badge for market results.
+    function trustBadgeFor(trust, t) {
+      if (!trust) return null;
+      const color = trust.tier === "verified" ? PASS_COLOR
+        : trust.tier === "established" ? "var(--dsw-alias-accent, #4f8cff)"
+        : trust.tier === "community" ? "var(--dsw-alias-label-secondary)"
+        : trust.tier === "archived" ? BLOCK_COLOR
+        : WARN_COLOR;
+      const label = trust.tier === "verified" ? t("trustVerified")
+        : trust.tier === "established" ? t("trustEstablished")
+        : trust.tier === "community" ? t("trustCommunity")
+        : trust.tier === "archived" ? t("trustArchived")
+        : t("trustNew");
+      return react.createElement("span", { style: s.badge(color) }, label);
+    }
 
     function SkillCard({ skill, t, onAudit, onActivate, onUninstall, onFreeze, onUnfreeze, onUpdate, onRollback, onToggle, onAbout, about, auditResult }) {
       const verdict = auditResult?.verdict;
@@ -251,7 +281,7 @@ window.__ModuleLoader__.load({
       return react.createElement("div", { style: s.card },
         react.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" } },
           react.createElement("strong", { style: s.cardTitle }, item.name),
-          react.createElement("div", { style: { display: "flex", gap: "6px", alignItems: "center" } }, srcBadge, rankBadge)
+          react.createElement("div", { style: { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" } }, trustBadgeFor(item.trust, t), srcBadge, rankBadge)
         ),
         react.createElement("p", { style: s.cardDesc }, item.description || ""),
         about !== undefined ? (about
@@ -372,6 +402,10 @@ window.__ModuleLoader__.load({
       };
 
       const doActivate = async (sk, item) => {
+        // Safety gates: warn-verdict audits and low-trust repos require confirmation.
+        const av = auditMap[`${item.name}:${sk.name}`];
+        if (av?.verdict === "warn" && !confirm(t("confirmWarnAudit"))) return { ok: false, cancelled: true };
+        if (item.trust?.warn && !confirm(t("confirmLowTrust"))) return { ok: false, cancelled: true };
         let body;
         if (item && item.sourceMarket === "github") body = { sourceKind: "github", sourceRef: `${item.name}@${item.ref || "main"}`, name: sk.name };
         else body = { sourceKind: "npm", sourceRef: item.name, name: sk.name };
