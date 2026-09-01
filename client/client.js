@@ -44,6 +44,8 @@ window.__ModuleLoader__.load({
       discovering: "Finding…",
       retryFresh: "Retry (skip cache)",
       inspectFailHint: "This may be a transient network issue — retry bypassing the cache.",
+      curatedPlaceholder: "Filter the curated index instantly… (press Search to go online)",
+      emptyCurated: "No curated skills match. Press Search to look online.",
       inspect: "Find skills",
       inspectRepo: "Find skills inside",
       rank: "Rank",
@@ -126,6 +128,8 @@ window.__ModuleLoader__.load({
       discovering: "发现中…",
       retryFresh: "跳过缓存重试",
       inspectFailHint: "可能是网络波动导致,可跳过缓存重试。",
+      curatedPlaceholder: "输入关键词即时筛选精选库…(点搜索联网查询)",
+      emptyCurated: "精选库没有匹配的技能。点搜索联网查找。",
       inspect: "发现技能",
       inspectRepo: "查找其中技能",
       rank: "排名",
@@ -378,6 +382,7 @@ window.__ModuleLoader__.load({
       const [hasMore, setHasMore] = react.useState(false);
       const loadingRef = react.useRef(false);
       const sentinelRef = react.useRef(null);
+      const [zhIndex, setZhIndex] = react.useState(null); // bundled Chinese curated index
 
       const doSearch = async (qOverride, { append = false, fresh = false } = {}) => {
         const effectiveQuery = qOverride !== undefined ? qOverride : query;
@@ -406,8 +411,17 @@ window.__ModuleLoader__.load({
         loadingRef.current = false;
       };
 
-      // Featured homepage on mount.
-      react.useEffect(() => { doSearch(""); }, []);
+      // Load the bundled Chinese curated index on mount (offline, instant).
+      // Falls back to the online featured homepage if the index is unavailable.
+      react.useEffect(() => {
+        (async () => {
+          try {
+            const data = await (await fetch("/api/skill-fusion/zh-index")).json();
+            if (data.ok) setZhIndex(data.index);
+            else doSearch("");
+          } catch { doSearch(""); }
+        })();
+      }, []);
 
       // Infinite scroll: when the bottom sentinel enters view, load the next page.
       react.useEffect(() => {
@@ -430,9 +444,34 @@ window.__ModuleLoader__.load({
       ];
       const pickPlatform = (key) => {
         setPlatform(key);
-        setQuery(key);
-        doSearch(key);
+        if (key === "") {
+          // 精选: back to the offline curated Chinese index.
+          setQuery("");
+          setResults(null);
+        } else {
+          setQuery(key);
+          doSearch(key);
+        }
       };
+
+      // Curated index grouped by repo, filtered client-side by the query.
+      const curatedGroups = react.useMemo(() => {
+        if (!zhIndex) return [];
+        const q = query.trim().toLowerCase();
+        const byRepo = new Map();
+        for (const [key, sk] of Object.entries(zhIndex.skills)) {
+          const sep = key.indexOf(":");
+          const repo = key.slice(0, sep);
+          const name = key.slice(sep + 1);
+          if (q && !name.toLowerCase().includes(q) && !(sk.zh || "").toLowerCase().includes(q) && !(sk.en || "").toLowerCase().includes(q) && !repo.toLowerCase().includes(q)) continue;
+          if (!byRepo.has(repo)) byRepo.set(repo, []);
+          byRepo.get(repo).push({ name, ...sk });
+        }
+        return [...byRepo.entries()];
+      }, [zhIndex, query]);
+
+      // Whether we're showing the offline curated view (精选 chip, no online results).
+      const curatedMode = platform === "" && results === null;
 
       const doInspect = async (item, { fresh = false } = {}) => {
         try {
@@ -471,23 +510,52 @@ window.__ModuleLoader__.load({
         return data;
       };
 
+      // Curated view: offline Chinese index grouped by repo/developer.
+      const renderCurated = () => {
+        if (!zhIndex) return react.createElement("p", { style: s.intro }, t("loading"));
+        if (curatedGroups.length === 0) return react.createElement("p", { style: s.intro }, t("emptyCurated"));
+        return react.createElement("div", { style: s.cards },
+          curatedGroups.map(([repo, skills]) =>
+            react.createElement("div", { key: repo, style: { display: "flex", flexDirection: "column", gap: "8px" } },
+              react.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", flexWrap: "wrap" } },
+                react.createElement("a", { href: repo.includes("/") ? `https://github.com/${repo}` : `https://www.npmjs.com/package/${repo}`, target: "_blank", rel: "noreferrer", style: Object.assign({}, s.link, { fontWeight: 600, fontSize: "13px" }) }, repo),
+                react.createElement("span", { style: s.srcBadge }, skills[0].developer),
+                react.createElement("span", { style: s.meta }, `${skills.length} ${t("skills")}`)
+              ),
+              ...skills.map(sk => {
+                const isNpm = !repo.includes("/");
+                const item = isNpm ? { sourceMarket: "npm", name: repo } : { sourceMarket: "github", name: repo, ref: "main" };
+                const skill = { name: sk.name, description: sk.zh || sk.en, sourceKind: isNpm ? "npm" : "github" };
+                return react.createElement(SkillCard, {
+                  key: `${repo}:${sk.name}`, skill, t,
+                  onAudit: () => doAudit({ name: sk.name }, item),
+                  onActivate: () => doActivate({ name: sk.name }, item),
+                  auditResult: auditMap[`${repo}:${sk.name}`],
+                });
+              })
+            )
+          )
+        );
+      };
+
       return react.createElement("div", { style: s.section },
         react.createElement("p", { style: s.intro }, t("intro")),
         react.createElement("div", { style: s.chips },
           ...PLATFORMS.map(p => react.createElement("button", { key: p.key, style: s.chip(platform === p.key), onClick: () => pickPlatform(p.key) }, p.label))
         ),
         react.createElement("div", { style: s.searchRow },
-          react.createElement("input", { style: s.input, value: query, onChange: e => setQuery(e.currentTarget.value), placeholder: t("marketPlaceholder"), onKeyDown: e => { if (e.key === "Enter") { setPlatform(""); doSearch(); } } }),
-          react.createElement("button", { style: Object.assign({}, s.searchBtn(true), { opacity: loading ? 0.7 : 1 }), disabled: loading, onClick: () => { setPlatform(""); doSearch(); } },
+          react.createElement("input", { style: s.input, value: query, onChange: e => setQuery(e.currentTarget.value), placeholder: curatedMode ? t("curatedPlaceholder") : t("marketPlaceholder"), onKeyDown: e => { if (e.key === "Enter") { doSearch(); } } }),
+          react.createElement("button", { style: Object.assign({}, s.searchBtn(true), { opacity: loading ? 0.7 : 1 }), disabled: loading, onClick: () => { doSearch(); } },
             loading ? react.createElement(react.Fragment, null, spinner(), t("search")) : t("search")),
           react.createElement("button", { style: s.searchBtn(false), disabled: loading, onClick: () => doSearch(undefined, { fresh: true }), title: t("refreshHint") }, t("refresh"))
         ),
-        loading && !results ? react.createElement("p", { style: s.intro }, t("loading")) : null,
-        results !== null && results.length === 0 && !loading ? react.createElement("p", { style: s.intro }, t("emptyMarket")) : null,
-        results ? react.createElement("div", { style: s.cards },
+        curatedMode ? renderCurated() : null,
+        !curatedMode && loading && !results ? react.createElement("p", { style: s.intro }, t("loading")) : null,
+        !curatedMode && results !== null && results.length === 0 && !loading ? react.createElement("p", { style: s.intro }, t("emptyMarket")) : null,
+        !curatedMode && results ? react.createElement("div", { style: s.cards },
           results.map(item => react.createElement(MarketCard, { key: item.name, item, t, onInspect: doInspect, expanded: expanded[item.name], onActivate: doActivate, onAudit: doAudit, auditMap }))
         ) : null,
-        results && results.length > 0 ? react.createElement("div", { ref: sentinelRef, style: { textAlign: "center", padding: "12px 0" } },
+        !curatedMode && results && results.length > 0 ? react.createElement("div", { ref: sentinelRef, style: { textAlign: "center", padding: "12px 0" } },
           loading ? react.createElement("span", { style: s.meta }, t("loading"))
             : hasMore ? react.createElement("button", { style: s.btn(false), onClick: () => doSearch(undefined, { append: true }) }, t("loadMore"))
             : react.createElement("span", { style: s.meta }, t("noMore"))
