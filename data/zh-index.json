@@ -30,12 +30,82 @@
   "affaan-m/ECC": {
    "developer": "affaan-m",
    "skillCount": 60,
-   "zhIntro": "agent harness 性能优化系统,多语言技能库(中/英/日),面向 Claude Code、Codex、Cursor 等平台的调优技能。"
+   "zhIntro": "agent harness 性能优化系统:技能、直觉、记忆、安全与研究优先的开发方法论,多语言(中/英/日)技能库。"
   },
   "npm:antd-claude-skill": {
    "developer": "Ant Design 社区",
    "skillCount": 1,
    "zhIntro": "Ant Design 社区技能:用 Pro-Components 快速生成后台管理页面(列表页/表单页/详情页)。"
+  },
+  "multica-ai/andrej-karpathy-skills": {
+   "developer": "multica-ai",
+   "zhIntro": "源自 Andrej Karpathy 对 LLM 编码陷阱的观察总结,单文件 CLAUDE.md 显著改善 Claude Code 行为。",
+   "skillCount": 0
+  },
+  "nextlevelbuilder/ui-ux-pro-max-skill": {
+   "developer": "nextlevelbuilder",
+   "zhIntro": "UI/UX 设计智能技能,跨平台构建专业级用户界面与交互体验。",
+   "skillCount": 0
+  },
+  "Graphify-Labs/graphify": {
+   "developer": "Graphify Labs",
+   "zhIntro": "把代码库、文档、SQL schema、PDF 转成可查询的知识图谱:本地确定性 AST 解析,无需向量库。",
+   "skillCount": 0
+  },
+  "Shubhamsaboo/awesome-llm-apps": {
+   "developer": "Shubham Saboo",
+   "zhIntro": "LLM 应用精选合集:RAG、AI agent、多模态等可直接参考的示例项目大全。",
+   "skillCount": 0
+  },
+  "Leonxlnx/taste-skill": {
+   "developer": "Leonxlnx",
+   "zhIntro": "让 AI 具备审美品味:产出更精致的设计、文案与代码风格,拒绝平庸输出。",
+   "skillCount": 0
+  },
+  "wanshuiyin/Auto-claude-code-research-in-sleep": {
+   "developer": "wanshuiyin",
+   "zhIntro": "睡眠时自动研究(ARIS):轻量纯 Markdown 技能,自主执行 ML 研究、交叉评审与想法沉淀。",
+   "skillCount": 0
+  },
+  "awesome-skills/code-review-skill": {
+   "developer": "awesome-skills",
+   "zhIntro": "全面的代码评审技能,覆盖多语言最佳实践、缺陷模式与建设性反馈方法。",
+   "skillCount": 0
+  },
+  "aiwithremy/claude-skills-llm-council": {
+   "developer": "aiwithremy",
+   "zhIntro": "LLM 委员会技能:让多个大模型会商讨论,辅助你做出更稳妥的决策。",
+   "skillCount": 0
+  },
+  "zubair-trabzada/ai-legal-claude": {
+   "developer": "zubair-trabzada",
+   "zhIntro": "AI 法律助手:合同审查、条款分析与法律风险识别。",
+   "skillCount": 0
+  },
+  "ConardLi/garden-skills": {
+   "developer": "ConardLi(前端)",
+   "zhIntro": "前端工程师的技能花园:浏览器原理、性能优化、工程化等前端核心能力。",
+   "skillCount": 0
+  },
+  "andreasbm/web-skills": {
+   "developer": "andreasbm",
+   "zhIntro": "现代 Web 开发技能合集,覆盖标准实践与平台能力。",
+   "skillCount": 0
+  },
+  "Imbad0202/academic-research-skills": {
+   "developer": "Imbad0202",
+   "zhIntro": "学术研究全流程技能:论文写作、同行评审、文献综述、深度研究管线。",
+   "skillCount": 0
+  },
+  "davila7/claude-code-templates": {
+   "developer": "davila7",
+   "zhIntro": "Claude Code 配置模板集:agents、commands、hooks、settings 开箱即用。",
+   "skillCount": 0
+  },
+  "VoltAgent/awesome-claude-code-subagents": {
+   "developer": "VoltAgent",
+   "zhIntro": "Claude Code 子代理精选集,覆盖各类专业角色的 subagent 配置。",
+   "skillCount": 0
   }
  },
  "skills": {

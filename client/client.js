@@ -294,7 +294,10 @@ window.__ModuleLoader__.load({
     }
 
     // Market result card: a GitHub repo or npm package that may contain skills.
-    function MarketCard({ item, t, onInspect, expanded, onActivate, onAudit, auditMap }) {
+    function MarketCard({ item, t, onInspect, expanded, onActivate, onAudit, auditMap, zhIndex }) {
+      // Chinese intro from the bundled index when this repo is curated (中文介绍优先).
+      const repoZh = zhIndex?.repos?.[item.name] || zhIndex?.repos?.[`npm:${item.name}`] || null;
+      const mainDesc = repoZh?.zhIntro || item.description || "";
       const rankBadge = item.rankKind === "stars"
         ? react.createElement("span", { style: s.rankBadge }, `${item.rankLabel} ${t("stars")}`)
         : react.createElement("span", { style: s.rankBadge }, `${t("popularity")} ${item.rankLabel}`);
@@ -335,7 +338,8 @@ window.__ModuleLoader__.load({
           react.createElement("strong", { style: s.cardTitle }, item.name),
           react.createElement("div", { style: s.cardBadges }, trustBadgeFor(item.trust, t), srcBadge, rankBadge)
         ),
-        react.createElement("p", { style: s.cardDesc }, item.description || ""),
+        react.createElement("p", { style: s.cardDesc }, mainDesc),
+        repoZh && item.description && repoZh.zhIntro !== item.description ? react.createElement("p", { style: s.meta }, item.description) : null,
         about !== undefined ? (about
           ? react.createElement("div", null,
               react.createElement("span", { style: s.srcBadge }, about.lang === "zh" ? t("langZh") : t("langEn")),
@@ -355,14 +359,19 @@ window.__ModuleLoader__.load({
           )
         ),
         skillsInside.length > 0 ? react.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginTop: "4px" } },
-          skillsInside.map(sk => react.createElement(SkillCard, {
-            key: sk.name, skill: sk, t,
-            onAudit: () => onAudit(sk, item),
-            onActivate: () => onActivate(sk, item),
-            onAbout: item.sourceMarket === "github" ? () => loadSkillAbout(sk) : undefined,
-            about: skillAbout[sk.name],
-            auditResult: auditMap[item.name + ":" + sk.name],
-          }))
+          skillsInside.map(sk => {
+            // Overlay Chinese description from the bundled index when available.
+            const zhSk = zhIndex?.skills?.[`${item.name}:${sk.name}`];
+            const skill = zhSk ? { ...sk, description: zhSk.zh || sk.description } : sk;
+            return react.createElement(SkillCard, {
+              key: sk.name, skill, t,
+              onAudit: () => onAudit(sk, item),
+              onActivate: () => onActivate(sk, item),
+              onAbout: item.sourceMarket === "github" ? () => loadSkillAbout(sk) : undefined,
+              about: skillAbout[sk.name],
+              auditResult: auditMap[item.name + ":" + sk.name],
+            });
+          })
         ) : expanded && expanded.length === 0 && !inspecting ? react.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" } },
           react.createElement("p", { style: s.meta }, `${t("noSkillsIn")} ${item.name}. ${t("inspectFailHint")}`),
           react.createElement("button", { style: s.btn(false), onClick: () => handleInspect(true) }, t("retryFresh"))
@@ -622,7 +631,7 @@ window.__ModuleLoader__.load({
         !curatedMode && loading && !results ? react.createElement("p", { style: s.intro }, t("loading")) : null,
         !curatedMode && results !== null && results.length === 0 && !loading ? react.createElement("p", { style: s.intro }, t("emptyMarket")) : null,
         !curatedMode && results ? react.createElement("div", { style: s.cards },
-          results.map(item => react.createElement(MarketCard, { key: item.name, item, t, onInspect: doInspect, expanded: expanded[item.name], onActivate: doActivate, onAudit: doAudit, auditMap }))
+          results.map(item => react.createElement(MarketCard, { key: item.name, item, t, onInspect: doInspect, expanded: expanded[item.name], onActivate: doActivate, onAudit: doAudit, auditMap, zhIndex }))
         ) : null,
         !curatedMode && results && results.length > 0 ? react.createElement("div", { ref: sentinelRef, style: { textAlign: "center", padding: "12px 0" } },
           loading ? react.createElement("span", { style: s.meta }, t("loading"))
