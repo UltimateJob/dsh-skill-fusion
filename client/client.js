@@ -166,25 +166,33 @@ window.__ModuleLoader__.load({
     };
 
     const s = {
-      section: { width: "100%", maxWidth: "760px", display: "flex", flexDirection: "column", gap: "14px" },
+      section: { width: "100%", maxWidth: "780px", display: "flex", flexDirection: "column", gap: "14px" },
       intro: { margin: 0, color: "var(--dsw-alias-label-tertiary)", fontSize: "13px", lineHeight: "20px" },
-      tabs: { display: "flex", gap: "8px" },
-      tabBtn: (active) => ({ padding: "6px 14px", border: active ? "1px solid var(--dsw-alias-border-l2)" : "1px solid transparent", borderRadius: "8px", background: active ? "var(--dsw-alias-bg-layer-3)" : "transparent", color: "var(--dsw-alias-label-primary)", font: "inherit", cursor: "pointer", fontSize: "13px" }),
-      input: { width: "100%", height: "36px", boxSizing: "border-box", border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)", font: "inherit", borderRadius: "8px", outline: "none", padding: "0 12px", fontSize: "13px" },
-      card: { border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-3)", borderRadius: "10px", padding: "12px", display: "flex", flexDirection: "column", gap: "8px" },
-      cardTitle: { fontSize: "13.5px", fontWeight: 600, margin: 0 },
-      cardDesc: { margin: 0, color: "var(--dsw-alias-label-secondary)", fontSize: "12px", lineHeight: "1.5" },
+      // Segmented-control tab group (top-level 市场/本地 switcher)
+      tabs: { display: "flex", gap: "2px", padding: "2px", borderRadius: "10px", background: "var(--dsw-alias-bg-layer-1)", border: "1px solid var(--dsw-alias-border-l1)", alignSelf: "flex-start" },
+      tabBtn: (active) => ({ padding: "6px 16px", border: "none", borderRadius: "8px", background: active ? "var(--dsw-alias-bg-layer-3)" : "transparent", color: active ? "var(--dsw-alias-label-primary)" : "var(--dsw-alias-label-tertiary)", font: "inherit", cursor: "pointer", fontSize: "13px", fontWeight: active ? 600 : 400, boxShadow: active ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }),
+      // Subtle ecosystem chips row
+      chips: { display: "flex", gap: "6px", flexWrap: "wrap" },
+      chip: (active) => ({ padding: "3px 12px", border: active ? "1px solid var(--dsw-alias-accent, #4f8cff)" : "1px solid var(--dsw-alias-border-l1)", borderRadius: "999px", background: active ? "color-mix(in srgb, var(--dsw-alias-accent, #4f8cff) 10%, transparent)" : "transparent", color: active ? "var(--dsw-alias-accent, #4f8cff)" : "var(--dsw-alias-label-tertiary)", font: "inherit", cursor: "pointer", fontSize: "12px" }),
+      searchRow: { display: "flex", gap: "8px", alignItems: "stretch" },
+      input: { flex: 1, height: "36px", boxSizing: "border-box", border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)", font: "inherit", borderRadius: "8px", outline: "none", padding: "0 12px", fontSize: "13px" },
+      card: { border: "1px solid var(--dsw-alias-border-l1)", background: "var(--dsw-alias-bg-layer-3)", borderRadius: "12px", padding: "14px 16px", display: "flex", flexDirection: "column", gap: "8px", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", transition: "border-color 120ms ease, box-shadow 120ms ease" },
+      cardHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" },
+      cardBadges: { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 0 },
+      cardTitle: { fontSize: "14px", fontWeight: 600, margin: 0, wordBreak: "break-all" },
+      cardDesc: { margin: 0, color: "var(--dsw-alias-label-secondary)", fontSize: "12.5px", lineHeight: "1.55" },
       meta: { margin: 0, color: "var(--dsw-alias-label-tertiary)", fontSize: "11.5px", lineHeight: "1.5" },
-      badge: (color) => ({ fontSize: "11px", padding: "0 6px", borderRadius: "999px", background: `color-mix(in srgb, ${color} 14%, transparent)`, color }),
-      actions: { display: "flex", gap: "8px", flexWrap: "wrap" },
-      btn: (primary) => ({ padding: "5px 12px", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "6px", background: primary ? "var(--dsw-alias-bg-accent)" : "var(--dsw-alias-bg-layer-1)", color: primary ? "var(--dsw-alias-label-on-accent)" : "var(--dsw-alias-label-primary)", font: "inherit", cursor: "pointer", fontSize: "12px" }),
-      cards: { display: "flex", flexDirection: "column", gap: "10px" },
+      badge: (color) => ({ fontSize: "11px", padding: "1px 8px", borderRadius: "999px", background: `color-mix(in srgb, ${color} 14%, transparent)`, color, whiteSpace: "nowrap", fontWeight: 500 }),
+      actions: { display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center", marginTop: "2px" },
+      btn: (primary) => ({ padding: "5px 14px", height: "30px", boxSizing: "border-box", border: primary ? "none" : "1px solid var(--dsw-alias-border-l2)", borderRadius: "7px", background: primary ? "var(--dsw-alias-bg-accent)" : "var(--dsw-alias-bg-layer-1)", color: primary ? "var(--dsw-alias-label-on-accent)" : "var(--dsw-alias-label-primary)", font: "inherit", cursor: "pointer", fontSize: "12px", display: "inline-flex", alignItems: "center" }),
+      searchBtn: (primary) => ({ padding: "0 16px", height: "36px", boxSizing: "border-box", border: primary ? "none" : "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px", background: primary ? "var(--dsw-alias-bg-accent)" : "var(--dsw-alias-bg-layer-1)", color: primary ? "var(--dsw-alias-label-on-accent)" : "var(--dsw-alias-label-primary)", font: "inherit", cursor: "pointer", fontSize: "13px", whiteSpace: "nowrap" }),
+      cards: { display: "flex", flexDirection: "column", gap: "12px" },
       auditBox: { border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "6px", padding: "8px", fontSize: "12px", fontFamily: "monospace", whiteSpace: "pre-wrap", color: "var(--dsw-alias-label-secondary)", background: "var(--dsw-alias-bg-layer-1)" },
-      frozenBadge: { fontSize: "11px", padding: "0 6px", borderRadius: "999px", background: "color-mix(in srgb, var(--dsw-alias-state-warning-primary, #d97706) 14%, transparent)", color: "var(--dsw-alias-state-warning-primary, #d97706)" },
-      rankBadge: { fontSize: "11px", padding: "0 8px", borderRadius: "999px", background: "color-mix(in srgb, var(--dsw-alias-state-success-primary, #16a34a) 14%, transparent)", color: "var(--dsw-alias-state-success-primary, #16a34a)", fontWeight: 600, whiteSpace: "nowrap" },
-      srcBadge: { fontSize: "11px", padding: "0 8px", borderRadius: "999px", background: "color-mix(in srgb, var(--dsw-alias-border-l2, #888) 20%, transparent)", color: "var(--dsw-alias-label-secondary)", whiteSpace: "nowrap" },
-      link: { color: "var(--dsw-alias-accent, #4f8cff)", fontSize: "12px", textDecoration: "none" },
-      aboutBox: { border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "6px", padding: "10px", fontSize: "12px", lineHeight: "1.6", whiteSpace: "pre-wrap", wordBreak: "break-word", color: "var(--dsw-alias-label-secondary)", background: "var(--dsw-alias-bg-layer-1)", maxHeight: "240px", overflowY: "auto" },
+      frozenBadge: { fontSize: "11px", padding: "1px 8px", borderRadius: "999px", background: "color-mix(in srgb, var(--dsw-alias-state-warning-primary, #d97706) 14%, transparent)", color: "var(--dsw-alias-state-warning-primary, #d97706)", whiteSpace: "nowrap" },
+      rankBadge: { fontSize: "11px", padding: "1px 8px", borderRadius: "999px", background: "color-mix(in srgb, var(--dsw-alias-state-success-primary, #16a34a) 14%, transparent)", color: "var(--dsw-alias-state-success-primary, #16a34a)", fontWeight: 600, whiteSpace: "nowrap" },
+      srcBadge: { fontSize: "11px", padding: "1px 8px", borderRadius: "999px", background: "color-mix(in srgb, var(--dsw-alias-border-l2, #888) 16%, transparent)", color: "var(--dsw-alias-label-secondary)", whiteSpace: "nowrap" },
+      link: { color: "var(--dsw-alias-accent, #4f8cff)", fontSize: "12px", textDecoration: "none", display: "inline-flex", alignItems: "center", height: "30px" },
+      aboutBox: { border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "8px", padding: "12px", fontSize: "12px", lineHeight: "1.65", whiteSpace: "pre-wrap", wordBreak: "break-word", color: "var(--dsw-alias-label-secondary)", background: "var(--dsw-alias-bg-layer-1)", maxHeight: "260px", overflowY: "auto" },
     };
 
     const PASS_COLOR = "var(--dsw-alias-state-success-primary, #16a34a)";
@@ -212,9 +220,9 @@ window.__ModuleLoader__.load({
       const verdict = auditResult?.verdict;
       const isFrozen = skill.status === "frozen" || skill.frozenVersion != null;
       return react.createElement("div", { style: s.card },
-        react.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" } },
+        react.createElement("div", { style: s.cardHead },
           react.createElement("strong", { style: s.cardTitle }, skill.name),
-          react.createElement("div", { style: { display: "flex", gap: "6px", alignItems: "center" } },
+          react.createElement("div", { style: s.cardBadges },
             verdict ? react.createElement("span", { style: s.badge(verdictColor(verdict)) }, t(verdict)) : null,
             isFrozen ? react.createElement("span", { style: s.frozenBadge }, t("frozen") + (skill.frozenVersion ? ` @${skill.frozenVersion}` : "")) : null,
             skill.enabled !== undefined ? react.createElement("span", { style: s.badge(skill.enabled ? PASS_COLOR : "var(--dsw-alias-label-tertiary)") }, skill.enabled ? t("enabledBadge") : t("disabledBadge")) : null,
@@ -279,9 +287,9 @@ window.__ModuleLoader__.load({
         } catch { setSkillAbout(prev => ({ ...prev, [sk.name]: null })); }
       };
       return react.createElement("div", { style: s.card },
-        react.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" } },
+        react.createElement("div", { style: s.cardHead },
           react.createElement("strong", { style: s.cardTitle }, item.name),
-          react.createElement("div", { style: { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" } }, trustBadgeFor(item.trust, t), srcBadge, rankBadge)
+          react.createElement("div", { style: s.cardBadges }, trustBadgeFor(item.trust, t), srcBadge, rankBadge)
         ),
         react.createElement("p", { style: s.cardDesc }, item.description || ""),
         about !== undefined ? (about
@@ -419,13 +427,13 @@ window.__ModuleLoader__.load({
 
       return react.createElement("div", { style: s.section },
         react.createElement("p", { style: s.intro }, t("intro")),
-        react.createElement("div", { style: s.tabs },
-          ...PLATFORMS.map(p => react.createElement("button", { key: p.key, style: s.tabBtn(platform === p.key), onClick: () => pickPlatform(p.key) }, p.label))
+        react.createElement("div", { style: s.chips },
+          ...PLATFORMS.map(p => react.createElement("button", { key: p.key, style: s.chip(platform === p.key), onClick: () => pickPlatform(p.key) }, p.label))
         ),
-        react.createElement("div", { style: { display: "flex", gap: "8px" } },
+        react.createElement("div", { style: s.searchRow },
           react.createElement("input", { style: s.input, value: query, onChange: e => setQuery(e.currentTarget.value), placeholder: t("marketPlaceholder"), onKeyDown: e => { if (e.key === "Enter") { setPlatform(""); doSearch(); } } }),
-          react.createElement("button", { style: s.btn(true), onClick: () => { setPlatform(""); doSearch(); } }, t("search")),
-          react.createElement("button", { style: s.btn(false), onClick: () => doSearch(undefined, { fresh: true }), title: t("refreshHint") }, t("refresh"))
+          react.createElement("button", { style: s.searchBtn(true), onClick: () => { setPlatform(""); doSearch(); } }, t("search")),
+          react.createElement("button", { style: s.searchBtn(false), onClick: () => doSearch(undefined, { fresh: true }), title: t("refreshHint") }, t("refresh"))
         ),
         loading && !results ? react.createElement("p", { style: s.intro }, t("loading")) : null,
         results !== null && results.length === 0 && !loading ? react.createElement("p", { style: s.intro }, t("emptyMarket")) : null,
