@@ -41,6 +41,9 @@ window.__ModuleLoader__.load({
       trustArchived: "Archived",
       confirmLowTrust: "This repo has little community validation (few stars). Install anyway?",
       confirmWarnAudit: "Audit flagged potential risks. Install anyway?",
+      discovering: "Finding…",
+      retryFresh: "Retry (skip cache)",
+      inspectFailHint: "This may be a transient network issue — retry bypassing the cache.",
       inspect: "Find skills",
       inspectRepo: "Find skills inside",
       rank: "Rank",
@@ -120,6 +123,9 @@ window.__ModuleLoader__.load({
       trustArchived: "已归档",
       confirmLowTrust: "此仓库社区验证较少(星标低)。仍要安装吗?",
       confirmWarnAudit: "审计发现潜在风险。仍要安装吗?",
+      discovering: "发现中…",
+      retryFresh: "跳过缓存重试",
+      inspectFailHint: "可能是网络波动导致,可跳过缓存重试。",
       inspect: "发现技能",
       inspectRepo: "查找其中技能",
       rank: "排名",
@@ -199,6 +205,16 @@ window.__ModuleLoader__.load({
     const PASS_COLOR = "var(--dsw-alias-state-success-primary, #16a34a)";
     const WARN_COLOR = "var(--dsw-alias-state-warning-primary, #d97706)";
     const BLOCK_COLOR = "var(--dsw-alias-state-error-primary, #dc2626)";
+
+    // Loading spinner: inject keyframes once, then <span className="sf-spinner">.
+    function ensureSpinnerStyle() {
+      if (typeof document === "undefined" || document.getElementById("sf-spin-style")) return;
+      const st = document.createElement("style");
+      st.id = "sf-spin-style";
+      st.textContent = "@keyframes sfSpin{to{transform:rotate(360deg)}}.sf-spinner{display:inline-block;width:11px;height:11px;border:2px solid var(--dsw-alias-border-l2);border-top-color:var(--dsw-alias-accent,#4f8cff);border-radius:50%;animation:sfSpin .7s linear infinite;vertical-align:-1px;margin-right:6px}";
+      document.head.appendChild(st);
+    }
+    function spinner() { return react.createElement("span", { className: "sf-spinner" }); }
     function verdictColor(v) { return v === "pass" ? PASS_COLOR : v === "warn" ? WARN_COLOR : BLOCK_COLOR; }
 
     // Community-trust badge for market results.
@@ -220,6 +236,17 @@ window.__ModuleLoader__.load({
     function SkillCard({ skill, t, onAudit, onActivate, onUninstall, onFreeze, onUnfreeze, onUpdate, onRollback, onToggle, onAbout, about, auditResult }) {
       const verdict = auditResult?.verdict;
       const isFrozen = skill.status === "frozen" || skill.frozenVersion != null;
+      // Busy wrapper: disable all buttons while an action runs, spinner on the active one.
+      const [busy, setBusy] = react.useState(null);
+      const run = (key, fn) => async () => {
+        if (busy) return;
+        setBusy(key);
+        try { await fn(); } finally { setBusy(null); }
+      };
+      const busyBtn = (key, primary, onClick, label) => onClick
+        ? react.createElement("button", { style: Object.assign({}, s.btn(primary), { opacity: busy && busy !== key ? 0.5 : 1 }), disabled: !!busy, onClick: run(key, onClick) },
+            busy === key ? react.createElement(react.Fragment, null, spinner(), label) : label)
+        : null;
       return react.createElement("div", { style: s.card },
         react.createElement("div", { style: s.cardHead },
           react.createElement("strong", { style: s.cardTitle }, skill.name),
@@ -247,15 +274,15 @@ window.__ModuleLoader__.load({
             )
           : react.createElement("p", { style: s.meta }, t("noAbout"))) : null,
         react.createElement("div", { style: s.actions },
-          onToggle ? react.createElement("button", { style: s.btn(!skill.enabled), onClick: onToggle }, skill.enabled ? t("disable") : t("enable")) : null,
-          onAbout ? react.createElement("button", { style: s.btn(false), onClick: onAbout }, t("about")) : null,
-          onAudit ? react.createElement("button", { style: s.btn(false), onClick: onAudit }, t("audit")) : null,
-          onActivate ? react.createElement("button", { style: s.btn(true), onClick: onActivate }, t("activate")) : null,
-          onFreeze ? react.createElement("button", { style: s.btn(false), onClick: onFreeze }, t("freeze")) : null,
-          onUnfreeze ? react.createElement("button", { style: s.btn(false), onClick: onUnfreeze }, t("unfreeze")) : null,
-          onUpdate ? react.createElement("button", { style: s.btn(false), onClick: onUpdate }, t("update")) : null,
-          onRollback ? react.createElement("button", { style: s.btn(false), onClick: onRollback }, t("rollback")) : null,
-          onUninstall ? react.createElement("button", { style: s.btn(false), onClick: onUninstall }, t("uninstall")) : null
+          busyBtn("toggle", !skill.enabled, onToggle, skill.enabled ? t("disable") : t("enable")),
+          busyBtn("about", false, onAbout, t("about")),
+          busyBtn("audit", false, onAudit, t("audit")),
+          busyBtn("activate", true, onActivate, t("activate")),
+          busyBtn("freeze", false, onFreeze, t("freeze")),
+          busyBtn("unfreeze", false, onUnfreeze, t("unfreeze")),
+          busyBtn("update", false, onUpdate, t("update")),
+          busyBtn("rollback", false, onRollback, t("rollback")),
+          busyBtn("uninstall", false, onUninstall, t("uninstall"))
         )
       );
     }
@@ -269,7 +296,16 @@ window.__ModuleLoader__.load({
       const skillsInside = expanded ? expanded.filter(Boolean) : [];
       const [about, setAbout] = react.useState(undefined);       // repo-level README (zh-preferred)
       const [skillAbout, setSkillAbout] = react.useState({});    // per-skill localized SKILL.md
+      const [inspecting, setInspecting] = react.useState(false);
+      const [aboutLoading, setAboutLoading] = react.useState(false);
+      const handleInspect = async (fresh) => {
+        if (inspecting) return;
+        setInspecting(true);
+        try { await onInspect(item, { fresh: !!fresh }); } finally { setInspecting(false); }
+      };
       const loadAbout = async () => {
+        if (aboutLoading) return;
+        setAboutLoading(true);
         setAbout(undefined);
         try {
           const url = item.sourceMarket === "github"
@@ -278,6 +314,7 @@ window.__ModuleLoader__.load({
           const data = await (await fetch(url)).json();
           setAbout(data.ok ? data : null);
         } catch { setAbout(null); }
+        setAboutLoading(false);
       };
       const loadSkillAbout = async (sk) => {
         if (item.sourceMarket !== "github") return;
@@ -302,9 +339,12 @@ window.__ModuleLoader__.load({
         react.createElement("div", { style: s.actionsSplit },
           item.url ? react.createElement("a", { href: item.url, target: "_blank", rel: "noreferrer", style: s.link }, t("openRepo")) : react.createElement("span"),
           react.createElement("div", { style: s.actions },
-            react.createElement("button", { style: s.btn(false), onClick: loadAbout }, t("about")),
-            react.createElement("button", { style: s.btn(false), onClick: () => onInspect(item) },
-              skillsInside.length > 0 ? `${t("inspect")} (${skillsInside.length})` : t("inspect")
+            react.createElement("button", { style: s.btn(false), disabled: aboutLoading, onClick: loadAbout },
+              aboutLoading ? react.createElement(react.Fragment, null, spinner(), t("about")) : t("about")),
+            react.createElement("button", { style: s.btn(false), disabled: inspecting, onClick: () => handleInspect(false) },
+              inspecting
+                ? react.createElement(react.Fragment, null, spinner(), t("discovering"))
+                : skillsInside.length > 0 ? `${t("inspect")} (${skillsInside.length})` : t("inspect")
             )
           )
         ),
@@ -317,7 +357,10 @@ window.__ModuleLoader__.load({
             about: skillAbout[sk.name],
             auditResult: auditMap[item.name + ":" + sk.name],
           }))
-        ) : expanded && expanded.length === 0 ? react.createElement("p", { style: s.meta }, `${t("noSkillsIn")} ${item.name}`) : null
+        ) : expanded && expanded.length === 0 && !inspecting ? react.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" } },
+          react.createElement("p", { style: s.meta }, `${t("noSkillsIn")} ${item.name}. ${t("inspectFailHint")}`),
+          react.createElement("button", { style: s.btn(false), onClick: () => handleInspect(true) }, t("retryFresh"))
+        ) : null
       );
     }
 
@@ -391,10 +434,10 @@ window.__ModuleLoader__.load({
         doSearch(key);
       };
 
-      const doInspect = async (item) => {
+      const doInspect = async (item, { fresh = false } = {}) => {
         try {
           let url;
-          if (item.sourceMarket === "github") url = `/api/skill-fusion/discover?source=github&repo=${encodeURIComponent(item.name)}&ref=${encodeURIComponent(item.ref || "main")}`;
+          if (item.sourceMarket === "github") url = `/api/skill-fusion/discover?source=github&repo=${encodeURIComponent(item.name)}&ref=${encodeURIComponent(item.ref || "main")}${fresh ? "&fresh=1" : ""}`;
           else url = `/api/skill-fusion/discover?source=npm&name=${encodeURIComponent(item.name)}`;
           const res = await fetch(url);
           const data = await res.json();
@@ -435,8 +478,9 @@ window.__ModuleLoader__.load({
         ),
         react.createElement("div", { style: s.searchRow },
           react.createElement("input", { style: s.input, value: query, onChange: e => setQuery(e.currentTarget.value), placeholder: t("marketPlaceholder"), onKeyDown: e => { if (e.key === "Enter") { setPlatform(""); doSearch(); } } }),
-          react.createElement("button", { style: s.searchBtn(true), onClick: () => { setPlatform(""); doSearch(); } }, t("search")),
-          react.createElement("button", { style: s.searchBtn(false), onClick: () => doSearch(undefined, { fresh: true }), title: t("refreshHint") }, t("refresh"))
+          react.createElement("button", { style: Object.assign({}, s.searchBtn(true), { opacity: loading ? 0.7 : 1 }), disabled: loading, onClick: () => { setPlatform(""); doSearch(); } },
+            loading ? react.createElement(react.Fragment, null, spinner(), t("search")) : t("search")),
+          react.createElement("button", { style: s.searchBtn(false), disabled: loading, onClick: () => doSearch(undefined, { fresh: true }), title: t("refreshHint") }, t("refresh"))
         ),
         loading && !results ? react.createElement("p", { style: s.intro }, t("loading")) : null,
         results !== null && results.length === 0 && !loading ? react.createElement("p", { style: s.intro }, t("emptyMarket")) : null,
@@ -524,6 +568,7 @@ window.__ModuleLoader__.load({
 
     function SkillForgeView({ t }) {
       const [view, setView] = react.useState("market");
+      react.useEffect(() => { ensureSpinnerStyle(); }, []);
       return react.createElement("div", { style: s.section },
         react.createElement("div", { style: s.tabs },
           react.createElement("button", { style: s.tabBtn(view === "market"), onClick: () => setView("market") }, t("market")),

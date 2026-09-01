@@ -77,7 +77,7 @@ test("cachedDiscoverGithub: caches repo inspection results", async () => {
     if (url.includes("git/trees")) {
       return { ok: true, json: async () => ({ sha: "abc", tree: [{ type: "blob", path: "skills/foo/SKILL.md" }] }) };
     }
-    if (url.includes("raw.githubusercontent.com")) {
+    if (url.includes("/contents/") || url.includes("raw.githubusercontent.com")) {
       return { ok: true, text: async () => "---\nname: foo\ndescription: cached skill\n---\nbody" };
     }
     return { ok: false };
@@ -91,4 +91,18 @@ test("cachedDiscoverGithub: caches repo inspection results", async () => {
   assert.equal(calls, callsAfterFirst);
   // parsed field is stripped before caching (internal), so cached name still there
   assert.equal(r2.candidates[0].name, "foo");
+});
+
+test("cachedDiscoverGithub: empty results are NOT cached (likely transient network failure)", async () => {
+  const home = freshHome();
+  let calls = 0;
+  const fetchFn = async (url) => {
+    calls++;
+    return { ok: false, status: 403 }; // everything fails (e.g. raw blocked)
+  };
+  const r1 = await cachedDiscoverGithub("o/r", { dshHome: home, fetchFn });
+  assert.equal(r1.candidates.length, 0);
+  const r2 = await cachedDiscoverGithub("o/r", { dshHome: home, fetchFn });
+  assert.equal(r2.cached, false, "empty result must not be served from cache");
+  assert.ok(calls >= 2, "second call re-fetches instead of serving cached empty");
 });
