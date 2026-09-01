@@ -383,6 +383,7 @@ window.__ModuleLoader__.load({
       const loadingRef = react.useRef(false);
       const sentinelRef = react.useRef(null);
       const [zhIndex, setZhIndex] = react.useState(null); // bundled Chinese curated index
+      const [searchHits, setSearchHits] = react.useState(null); // ranked intent-search hits
 
       const doSearch = async (qOverride, { append = false, fresh = false } = {}) => {
         const effectiveQuery = qOverride !== undefined ? qOverride : query;
@@ -473,6 +474,23 @@ window.__ModuleLoader__.load({
       // Whether we're showing the offline curated view (精选 chip, no online results).
       const curatedMode = platform === "" && results === null;
 
+      // Debounced intent search over the bundled index (curated mode only):
+      // matches name (zh/en) + Chinese descriptions with synonym expansion,
+      // ranked server-side by relevance priority.
+      react.useEffect(() => {
+        if (!curatedMode) { setSearchHits(null); return; }
+        const q = query.trim();
+        if (!q) { setSearchHits(null); return; }
+        const timer = setTimeout(async () => {
+          try {
+            const res = await fetch(`/api/skill-fusion/search?q=${encodeURIComponent(q)}&limit=30`);
+            const data = await res.json();
+            setSearchHits(data.ok ? data.hits : []);
+          } catch { setSearchHits([]); }
+        }, 250);
+        return () => clearTimeout(timer);
+      }, [query, curatedMode]);
+
       const doInspect = async (item, { fresh = false } = {}) => {
         try {
           let url;
@@ -511,8 +529,33 @@ window.__ModuleLoader__.load({
       };
 
       // Curated view: offline Chinese index grouped by repo/developer.
+      // With a query: relevance-ranked intent search across the whole index.
       const renderCurated = () => {
         if (!zhIndex) return react.createElement("p", { style: s.intro }, t("loading"));
+        // Ranked intent search results (query non-empty)
+        if (query.trim()) {
+          if (searchHits === null) return react.createElement("p", { style: s.intro }, t("loading"));
+          if (searchHits.length === 0) return react.createElement("p", { style: s.intro }, t("emptyCurated"));
+          return react.createElement("div", { style: s.cards },
+            searchHits.map(h => {
+              const isNpm = !h.repo.includes("/");
+              const item = isNpm ? { sourceMarket: "npm", name: h.repo } : { sourceMarket: "github", name: h.repo, ref: "main" };
+              const skill = { name: h.name, description: h.zh || h.en, sourceKind: isNpm ? "npm" : "github" };
+              return react.createElement("div", { key: h.key },
+                react.createElement("p", { style: Object.assign({}, s.meta, { marginBottom: "-2px" }) },
+                  `${h.repo} · ${h.developer}`
+                ),
+                react.createElement(SkillCard, {
+                  skill, t,
+                  onAudit: () => doAudit({ name: h.name }, item),
+                  onActivate: () => doActivate({ name: h.name }, item),
+                  auditResult: auditMap[h.key],
+                })
+              );
+            })
+          );
+        }
+        // Grouped browse (query empty)
         if (curatedGroups.length === 0) return react.createElement("p", { style: s.intro }, t("emptyCurated"));
         return react.createElement("div", { style: s.cards },
           curatedGroups.map(([repo, skills]) =>
