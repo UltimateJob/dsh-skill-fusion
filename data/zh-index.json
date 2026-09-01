@@ -4,31 +4,38 @@
  "repos": {
   "anthropics/skills": {
    "developer": "Anthropic 官方",
-   "skillCount": 20
+   "skillCount": 20,
+   "zhIntro": "Anthropic 官方技能库:办公文档处理(xlsx/docx/pdf)、视觉设计、品牌规范、Web 测试等官方精选技能。"
   },
   "obra/superpowers": {
    "developer": "Jesse Vincent (obra)",
-   "skillCount": 14
+   "skillCount": 14,
+   "zhIntro": "知名 agentic 开发方法论框架:TDD、系统化调试、计划编写、代码评审等完整软件工程流程技能。"
   },
   "mattpocock/skills": {
    "developer": "Matt Pocock",
-   "skillCount": 37
+   "skillCount": 37,
+   "zhIntro": "Matt Pocock 的实战工程技能集,面向真实工程师日常开发场景,强调可直接落地的最佳实践。"
   },
   "addyosmani/agent-skills": {
    "developer": "Addy Osmani (Google)",
-   "skillCount": 25
+   "skillCount": 25,
+   "zhIntro": "Google 工程师 Addy Osmani 的生产级 AI 编码技能:API 设计、CI/CD、代码质量、浏览器测试等。"
   },
   "wshobson/agents": {
    "developer": "Seth Hobson (wshobson)",
-   "skillCount": 60
+   "skillCount": 60,
+   "zhIntro": "大型多领域技能合集,181 个技能覆盖前端、后端、数据库、DevOps、AI 工程、设计等方向。"
   },
   "affaan-m/ECC": {
    "developer": "affaan-m",
-   "skillCount": 60
+   "skillCount": 60,
+   "zhIntro": "agent harness 性能优化系统,多语言技能库(中/英/日),面向 Claude Code、Codex、Cursor 等平台的调优技能。"
   },
   "npm:antd-claude-skill": {
    "developer": "Ant Design 社区",
-   "skillCount": 1
+   "skillCount": 1,
+   "zhIntro": "Ant Design 社区技能:用 Pro-Components 快速生成后台管理页面(列表页/表单页/详情页)。"
   }
  },
  "skills": {

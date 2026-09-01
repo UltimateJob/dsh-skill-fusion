@@ -46,6 +46,7 @@ window.__ModuleLoader__.load({
       inspectFailHint: "This may be a transient network issue — retry bypassing the cache.",
       curatedPlaceholder: "Filter the curated index instantly… (press Search to go online)",
       emptyCurated: "No curated skills match. Press Search to look online.",
+      collapse: "Collapse",
       inspect: "Find skills",
       inspectRepo: "Find skills inside",
       rank: "Rank",
@@ -130,6 +131,7 @@ window.__ModuleLoader__.load({
       inspectFailHint: "可能是网络波动导致,可跳过缓存重试。",
       curatedPlaceholder: "输入关键词即时筛选精选库…(点搜索联网查询)",
       emptyCurated: "精选库没有匹配的技能。点搜索联网查找。",
+      collapse: "收起",
       inspect: "发现技能",
       inspectRepo: "查找其中技能",
       rank: "排名",
@@ -473,6 +475,13 @@ window.__ModuleLoader__.load({
 
       // Whether we're showing the offline curated view (精选 chip, no online results).
       const curatedMode = platform === "" && results === null;
+      // Which repo groups are expanded in the curated browse view.
+      const [openGroups, setOpenGroups] = react.useState(() => new Set());
+      const toggleGroup = (repo) => setOpenGroups(prev => {
+        const next = new Set(prev);
+        next.has(repo) ? next.delete(repo) : next.add(repo);
+        return next;
+      });
 
       // Debounced intent search over the bundled index (curated mode only):
       // matches name (zh/en) + Chinese descriptions with synonym expansion,
@@ -555,29 +564,46 @@ window.__ModuleLoader__.load({
             })
           );
         }
-        // Grouped browse (query empty)
+        // Grouped browse (query empty): collapsible repo/developer cards.
         if (curatedGroups.length === 0) return react.createElement("p", { style: s.intro }, t("emptyCurated"));
         return react.createElement("div", { style: s.cards },
-          curatedGroups.map(([repo, skills]) =>
-            react.createElement("div", { key: repo, style: { display: "flex", flexDirection: "column", gap: "8px" } },
-              react.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginTop: "4px", flexWrap: "wrap" } },
-                react.createElement("a", { href: repo.includes("/") ? `https://github.com/${repo}` : `https://www.npmjs.com/package/${repo}`, target: "_blank", rel: "noreferrer", style: Object.assign({}, s.link, { fontWeight: 600, fontSize: "13px" }) }, repo),
-                react.createElement("span", { style: s.srcBadge }, skills[0].developer),
-                react.createElement("span", { style: s.meta }, `${skills.length} ${t("skills")}`)
+          curatedGroups.map(([repo, skills]) => {
+            const isNpm = !repo.includes("/");
+            const repoMeta = zhIndex.repos[repo] || zhIndex.repos[`npm:${repo}`] || {};
+            const open = openGroups.has(repo);
+            const repoUrl = isNpm ? `https://www.npmjs.com/package/${repo}` : `https://github.com/${repo}`;
+            return react.createElement("div", { key: repo, style: s.card },
+              // Group header: repo + developer + skill count (always visible)
+              react.createElement("div", { style: s.cardHead },
+                react.createElement("a", { href: repoUrl, target: "_blank", rel: "noreferrer", style: Object.assign({}, s.link, { fontWeight: 600, fontSize: "14px" }) }, repo),
+                react.createElement("div", { style: s.cardBadges },
+                  react.createElement("span", { style: s.srcBadge }, skills[0].developer),
+                  react.createElement("span", { style: s.rankBadge }, `${skills.length} ${t("skills")}`)
+                )
               ),
-              ...skills.map(sk => {
-                const isNpm = !repo.includes("/");
-                const item = isNpm ? { sourceMarket: "npm", name: repo } : { sourceMarket: "github", name: repo, ref: "main" };
-                const skill = { name: sk.name, description: sk.zh || sk.en, sourceKind: isNpm ? "npm" : "github" };
-                return react.createElement(SkillCard, {
-                  key: `${repo}:${sk.name}`, skill, t,
-                  onAudit: () => doAudit({ name: sk.name }, item),
-                  onActivate: () => doActivate({ name: sk.name }, item),
-                  auditResult: auditMap[`${repo}:${sk.name}`],
-                });
-              })
-            )
-          )
+              // Repo-level Chinese intro (上级介绍)
+              repoMeta.zhIntro ? react.createElement("p", { style: s.cardDesc }, repoMeta.zhIntro) : null,
+              // Actions: open repo link left, expand/collapse right
+              react.createElement("div", { style: s.actionsSplit },
+                react.createElement("a", { href: repoUrl, target: "_blank", rel: "noreferrer", style: s.link }, t("openRepo")),
+                react.createElement("button", { style: s.btn(open), onClick: () => toggleGroup(repo) },
+                  open ? t("collapse") : `${t("inspect")} (${skills.length})`)
+              ),
+              // Expanded: the skills inside this repo
+              open ? react.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginTop: "4px" } },
+                skills.map(sk => {
+                  const item = isNpm ? { sourceMarket: "npm", name: repo } : { sourceMarket: "github", name: repo, ref: "main" };
+                  const skill = { name: sk.name, description: sk.zh || sk.en, sourceKind: isNpm ? "npm" : "github" };
+                  return react.createElement(SkillCard, {
+                    key: `${repo}:${sk.name}`, skill, t,
+                    onAudit: () => doAudit({ name: sk.name }, item),
+                    onActivate: () => doActivate({ name: sk.name }, item),
+                    auditResult: auditMap[`${repo}:${sk.name}`],
+                  });
+                })
+              ) : null
+            );
+          })
         );
       };
 
