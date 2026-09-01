@@ -183,7 +183,8 @@ window.__ModuleLoader__.load({
       cardDesc: { margin: 0, color: "var(--dsw-alias-label-secondary)", fontSize: "12.5px", lineHeight: "1.55" },
       meta: { margin: 0, color: "var(--dsw-alias-label-tertiary)", fontSize: "11.5px", lineHeight: "1.5" },
       badge: (color) => ({ fontSize: "11px", padding: "1px 8px", borderRadius: "999px", background: `color-mix(in srgb, ${color} 14%, transparent)`, color, whiteSpace: "nowrap", fontWeight: 500 }),
-      actions: { display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center", marginTop: "2px" },
+      actions: { display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", marginTop: "2px" },
+      actionsSplit: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginTop: "2px" },
       btn: (primary) => ({ padding: "5px 14px", height: "30px", boxSizing: "border-box", border: primary ? "none" : "1px solid var(--dsw-alias-border-l2)", borderRadius: "7px", background: primary ? "var(--dsw-alias-bg-accent)" : "var(--dsw-alias-bg-layer-1)", color: primary ? "var(--dsw-alias-label-on-accent)" : "var(--dsw-alias-label-primary)", font: "inherit", cursor: "pointer", fontSize: "12px", display: "inline-flex", alignItems: "center" }),
       searchBtn: (primary) => ({ padding: "0 16px", height: "36px", boxSizing: "border-box", border: primary ? "none" : "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px", background: primary ? "var(--dsw-alias-bg-accent)" : "var(--dsw-alias-bg-layer-1)", color: primary ? "var(--dsw-alias-label-on-accent)" : "var(--dsw-alias-label-primary)", font: "inherit", cursor: "pointer", fontSize: "13px", whiteSpace: "nowrap" }),
       cards: { display: "flex", flexDirection: "column", gap: "12px" },
@@ -298,11 +299,13 @@ window.__ModuleLoader__.load({
               react.createElement("div", { style: s.aboutBox }, about.text)
             )
           : react.createElement("p", { style: s.meta }, t("noAbout"))) : null,
-        react.createElement("div", { style: s.actions },
-          item.url ? react.createElement("a", { href: item.url, target: "_blank", rel: "noreferrer", style: s.link }, t("openRepo")) : null,
-          react.createElement("button", { style: s.btn(false), onClick: loadAbout }, t("about")),
-          react.createElement("button", { style: s.btn(false), onClick: () => onInspect(item) },
-            skillsInside.length > 0 ? `${t("inspect")} (${skillsInside.length})` : t("inspect")
+        react.createElement("div", { style: s.actionsSplit },
+          item.url ? react.createElement("a", { href: item.url, target: "_blank", rel: "noreferrer", style: s.link }, t("openRepo")) : react.createElement("span"),
+          react.createElement("div", { style: s.actions },
+            react.createElement("button", { style: s.btn(false), onClick: loadAbout }, t("about")),
+            react.createElement("button", { style: s.btn(false), onClick: () => onInspect(item) },
+              skillsInside.length > 0 ? `${t("inspect")} (${skillsInside.length})` : t("inspect")
+            )
           )
         ),
         skillsInside.length > 0 ? react.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginTop: "4px" } },
