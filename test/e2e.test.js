@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, existsSync, lstatSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCli } from "../lib/cli.js";
+import { symlinkSupported, expectedDirMode } from "./helpers/platform.js";
 
 function freshHome() { return mkdtempSync(join(tmpdir(), "fusion-e2e-")); }
 function fixtureSource(root) {
@@ -36,9 +37,9 @@ test("e2e: discover -> audit -> activate lands in ~/.dsh/skills and is discovera
 
   out.length = 0;
   await runCli(["list"], { out: log, dshHome: home });
-  assert.ok(out.join("\n").includes("adversarial-review\tlocal\tsymlink\tactive"));
+  assert.ok(out.join("\n").includes(`adversarial-review\tlocal\t${expectedDirMode()}\tactive`));
 
-  assert.equal(lstatSync(target).isSymbolicLink(), true);
+  assert.equal(lstatSync(target).isSymbolicLink(), symlinkSupported());
 });
 
 test("e2e: blocked skill (name conflict) does not activate", async () => {

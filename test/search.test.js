@@ -70,3 +70,32 @@ test("rankIndex: empty query returns empty", () => {
   assert.deepEqual(rankIndex(INDEX, ""), []);
   assert.deepEqual(rankIndex(INDEX, "   "), []);
 });
+
+test("rankIndex: English inflection still expands (excels → excel → xlsx)", () => {
+  const r = rankIndex(INDEX, "excels");
+  assert.equal(r[0].name, "xlsx");
+});
+
+test("rankIndex: single-char Chinese query matches descriptions without exploding synonyms", () => {
+  const r = rankIndex(INDEX, "表");
+  assert.ok(r.some(x => x.name === "xlsx"), `expected xlsx, got ${r.map(x => x.name).join(",")}`);
+  // Single-char tokens must not synonym-expand: nothing unrelated should sneak in.
+  assert.ok(r.every(x => (x.zh || "").includes("表")), "all hits contain the literal char");
+});
+
+test("rankIndex: coincidental substrings do not pull unrelated clusters", () => {
+  // "前端" bigrams (前端) expand the 前端 key; they must NOT also expand 海报设计
+  // just because a compound key happens to share a char — canvas-design (海报/设计
+  // cluster) should rank below the direct frontend match or not appear at all.
+  const WEB_INDEX = {
+    version: 1,
+    repos: {},
+    skills: {
+      "a/b:frontend-dev": { developer: "x", zh: "前端开发与网页构建", en: "frontend development", skillDir: "skills/frontend-dev" },
+      "a/b:poster-art": { developer: "x", zh: "生成精美海报", en: "poster art", skillDir: "skills/poster-art" },
+    },
+  };
+  const r = rankIndex(WEB_INDEX, "前端");
+  assert.equal(r[0].name, "frontend-dev");
+  assert.ok(!r.some(x => x.name === "poster-art"), "poster-art must not be pulled in by a 前端 query");
+});

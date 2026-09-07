@@ -1,9 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { listLocalSkills, setSkillEnabled } from "../lib/local.js";
+import { symlinkSupported } from "./helpers/platform.js";
 
 function freshHome() { return mkdtempSync(join(tmpdir(), "fusion-local-")); }
 function addSkill(dshHome, name, { disabled = false, desc = "test skill" } = {}) {
@@ -41,28 +42,30 @@ test("listLocalSkills: marks fusion-managed skills", () => {
   assert.equal(list[0].managed, true);
 });
 
-test("setSkillEnabled: disable moves skill out of skills dir", () => {
+test("setSkillEnabled: disable rewrites frontmatter (skill stays in place)", () => {
   const home = freshHome();
   addSkill(home, "toggle-me");
   const r = setSkillEnabled(home, "toggle-me", false);
   assert.equal(r.ok, true);
-  assert.equal(existsSync(join(home, "skills", "toggle-me", "SKILL.md")), false);
-  assert.equal(existsSync(join(home, "skill-fusion", "disabled", "toggle-me", "SKILL.md")), true);
+  assert.equal(r.via, "frontmatter");
+  // Skill stays in place with the disable flag
+  const p = join(home, "skills", "toggle-me", "SKILL.md");
+  assert.equal(existsSync(p), true);
   // And it now shows as disabled
   const list = listLocalSkills(home);
   assert.equal(list.find(s => s.name === "toggle-me").enabled, false);
 });
 
-test("setSkillEnabled: enable moves skill back", () => {
+test("setSkillEnabled: enable clears the flag", () => {
   const home = freshHome();
-  addSkill(home, "toggle-me", { disabled: true });
+  addSkill(home, "toggle-me");
+  setSkillEnabled(home, "toggle-me", false);
   const r = setSkillEnabled(home, "toggle-me", true);
   assert.equal(r.ok, true);
-  assert.equal(existsSync(join(home, "skills", "toggle-me", "SKILL.md")), true);
   assert.equal(listLocalSkills(home).find(s => s.name === "toggle-me").enabled, true);
 });
 
-test("setSkillEnabled: works with symlinked (fusion-activated) skills", () => {
+test("setSkillEnabled: frontmatter toggle works through symlinks (fusion-activated)", { skip: !symlinkSupported() && "host cannot create directory symlinks" }, () => {
   const home = freshHome();
   // Simulate a fusion symlink: target dir elsewhere, symlink inside skills/
   const target = join(home, "cache", "real-skill");
@@ -70,12 +73,12 @@ test("setSkillEnabled: works with symlinked (fusion-activated) skills", () => {
   writeFileSync(join(target, "SKILL.md"), "---\nname: real-skill\ndescription: via symlink\n---\nbody", "utf8");
   mkdirSync(join(home, "skills"), { recursive: true });
   symlinkSync(target, join(home, "skills", "real-skill"), "dir");
-  // Disable moves the symlink (not the target)
+  // Disable rewrites the target's frontmatter through the link
   const r = setSkillEnabled(home, "real-skill", false);
   assert.equal(r.ok, true);
-  assert.equal(existsSync(join(home, "skills", "real-skill")), false);
-  assert.equal(existsSync(join(home, "skill-fusion", "disabled", "real-skill", "SKILL.md")), true);
-  assert.equal(existsSync(join(target, "SKILL.md")), true, "target must be untouched");
+  assert.equal(r.via, "frontmatter");
+  assert.equal(existsSync(join(home, "skills", "real-skill")), true, "symlink stays in place");
+  assert.ok(readFileSync(join(target, "SKILL.md"), "utf8").includes("disable-model-invocation: true"));
 });
 
 test("setSkillEnabled: not-found returns error", () => {

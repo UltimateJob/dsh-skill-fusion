@@ -1,3 +1,5 @@
+// GENERATED FILE — do not edit directly.
+// Sources live in client/src/i18n.js, styles.js, components.js, views.js, entry.js; regenerate with: npm run build:client
 window.__ModuleLoader__.load({
   id: "dsh-skill-fusion",
   factory: (require) => {
@@ -5,6 +7,10 @@ window.__ModuleLoader__.load({
     var exports = module.exports;
     Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
     let react = require("react");
+
+    // ---- client/src/i18n.js ----
+    // Source module for the client bundle. Edit here, then regenerate
+    // client/client.js with: npm run build:client
 
     const en = {
       nav: "Skill Forge",
@@ -38,6 +44,7 @@ window.__ModuleLoader__.load({
       trustEstablished: "Established",
       trustCommunity: "Community",
       trustNew: "New repo",
+      trustStale: "Stale",
       trustArchived: "Archived",
       confirmLowTrust: "This repo has little community validation (few stars). Install anyway?",
       confirmWarnAudit: "Audit flagged potential risks. Install anyway?",
@@ -47,6 +54,25 @@ window.__ModuleLoader__.load({
       curatedPlaceholder: "Filter the curated index instantly… (press Search to go online)",
       emptyCurated: "No curated skills match. Press Search to look online.",
       collapse: "Collapse",
+      create: "New skill",
+      createConfirm: "Create",
+      createCancel: "Cancel",
+      createExists: "A skill with this name already exists.",
+      createInvalid: "Invalid name (lowercase letters, digits, hyphens).",
+      namePlaceholder: "skill-name (lowercase-hyphenated)",
+      descPlaceholder: "Description: when should this skill trigger?",
+      rootUser: "User root (~/.dsh/skills)",
+      rootProject: "Project root (.dsh/skills)",
+      deleteBtn: "Delete",
+      restore: "Restore",
+      confirmDelete: "Delete this skill into the trash? (recoverable)",
+      trashTitle: "Trash",
+      srcUser: "User",
+      srcProject: "Project",
+      srcProjectAgents: "Project Agents",
+      srcAgents: "Agents shared",
+      srcPlugin: "Plugin bundled",
+      pluginReadonly: "read-only",
       inspect: "Find skills",
       inspectRepo: "Find skills inside",
       rank: "Rank",
@@ -123,6 +149,7 @@ window.__ModuleLoader__.load({
       trustEstablished: "成熟",
       trustCommunity: "社区",
       trustNew: "新仓库",
+      trustStale: "长期未更新",
       trustArchived: "已归档",
       confirmLowTrust: "此仓库社区验证较少(星标低)。仍要安装吗?",
       confirmWarnAudit: "审计发现潜在风险。仍要安装吗?",
@@ -132,6 +159,25 @@ window.__ModuleLoader__.load({
       curatedPlaceholder: "输入关键词即时筛选精选库…(点搜索联网查询)",
       emptyCurated: "精选库没有匹配的技能。点搜索联网查找。",
       collapse: "收起",
+      create: "新建技能",
+      createConfirm: "创建",
+      createCancel: "取消",
+      createExists: "同名技能已存在。",
+      createInvalid: "名称无效(小写字母、数字、连字符)。",
+      namePlaceholder: "技能名(小写-连字符)",
+      descPlaceholder: "描述:什么时候应该触发这个技能?",
+      rootUser: "用户目录(~/.dsh/skills)",
+      rootProject: "项目目录(.dsh/skills)",
+      deleteBtn: "删除",
+      restore: "恢复",
+      confirmDelete: "删除此技能到回收站?(可恢复)",
+      trashTitle: "回收站",
+      srcUser: "用户",
+      srcProject: "项目",
+      srcProjectAgents: "项目 Agents",
+      srcAgents: "Agents 共享",
+      srcPlugin: "插件内置",
+      pluginReadonly: "只读",
       inspect: "发现技能",
       inspectRepo: "查找其中技能",
       rank: "排名",
@@ -177,6 +223,10 @@ window.__ModuleLoader__.load({
       exported: "已导出",
     };
 
+    // ---- client/src/styles.js ----
+    // Source module for the client bundle. Edit here, then regenerate
+    // client/client.js with: npm run build:client
+
     const s = {
       section: { width: "100%", maxWidth: "780px", display: "flex", flexDirection: "column", gap: "14px" },
       intro: { margin: 0, color: "var(--dsw-alias-label-tertiary)", fontSize: "13px", lineHeight: "20px" },
@@ -208,6 +258,10 @@ window.__ModuleLoader__.load({
       aboutBox: { border: "1px solid var(--dsw-alias-border-l1)", borderRadius: "8px", padding: "12px", fontSize: "12px", lineHeight: "1.65", whiteSpace: "pre-wrap", wordBreak: "break-word", color: "var(--dsw-alias-label-secondary)", background: "var(--dsw-alias-bg-layer-1)", maxHeight: "260px", overflowY: "auto" },
     };
 
+    // ---- client/src/components.js ----
+    // Source module for the client bundle. Edit here, then regenerate
+    // client/client.js with: npm run build:client
+
     const PASS_COLOR = "var(--dsw-alias-state-success-primary, #16a34a)";
     const WARN_COLOR = "var(--dsw-alias-state-warning-primary, #d97706)";
     const BLOCK_COLOR = "var(--dsw-alias-state-error-primary, #dc2626)";
@@ -223,7 +277,8 @@ window.__ModuleLoader__.load({
     function spinner() { return react.createElement("span", { className: "sf-spinner" }); }
     function verdictColor(v) { return v === "pass" ? PASS_COLOR : v === "warn" ? WARN_COLOR : BLOCK_COLOR; }
 
-    // Community-trust badge for market results.
+    // Community-trust badge for market results; a stale (long-unmaintained)
+    // result gets an extra warning badge next to its tier badge.
     function trustBadgeFor(trust, t) {
       if (!trust) return null;
       const color = trust.tier === "verified" ? PASS_COLOR
@@ -236,10 +291,12 @@ window.__ModuleLoader__.load({
         : trust.tier === "community" ? t("trustCommunity")
         : trust.tier === "archived" ? t("trustArchived")
         : t("trustNew");
-      return react.createElement("span", { style: s.badge(color) }, label);
+      const badge = react.createElement("span", { style: s.badge(color) }, label);
+      if (!trust.stale || trust.tier === "archived") return badge; // archived already signals dead
+      return react.createElement(react.Fragment, null, badge, react.createElement("span", { style: s.badge(WARN_COLOR) }, t("trustStale")));
     }
 
-    function SkillCard({ skill, t, onAudit, onActivate, onUninstall, onFreeze, onUnfreeze, onUpdate, onRollback, onToggle, onAbout, about, auditResult }) {
+    function SkillCard({ skill, t, onAudit, onActivate, onUninstall, onFreeze, onUnfreeze, onUpdate, onRollback, onToggle, onDelete, onRestore, onAbout, about, auditResult }) {
       const verdict = auditResult?.verdict;
       const isFrozen = skill.status === "frozen" || skill.frozenVersion != null;
       // Busy wrapper: disable all buttons while an action runs, spinner on the active one.
@@ -281,6 +338,8 @@ window.__ModuleLoader__.load({
           : react.createElement("p", { style: s.meta }, t("noAbout"))) : null,
         react.createElement("div", { style: s.actions },
           busyBtn("toggle", !skill.enabled, onToggle, skill.enabled ? t("disable") : t("enable")),
+          busyBtn("restore", true, onRestore, t("restore")),
+          busyBtn("delete", false, onDelete, t("deleteBtn")),
           busyBtn("about", false, onAbout, t("about")),
           busyBtn("audit", false, onAudit, t("audit")),
           busyBtn("activate", true, onActivate, t("activate")),
@@ -378,6 +437,10 @@ window.__ModuleLoader__.load({
         ) : null
       );
     }
+
+    // ---- client/src/views.js ----
+    // Source module for the client bundle. Edit here, then regenerate
+    // client/client.js with: npm run build:client
 
     // Market view: search the GitHub/npm skill market by keyword or ecosystem
     // chips, ranked by stars/popularity, with infinite scroll and a local cache
@@ -641,12 +704,18 @@ window.__ModuleLoader__.load({
       );
     }
 
-    // Local view: all skills DSH has locally (~/.dsh/skills), with enable/disable
-    // management for every skill and lifecycle actions for fusion-managed ones.
+    // Local view: all skills across every source root (project / user / agents /
+    // plugin-bundled), grouped by source, with frontmatter enable/disable,
+    // create-skill scaffold, and a recoverable trash.
     function ActivatedView({ t }) {
       const [skills, setSkills] = react.useState(null);
       const [loading, setLoading] = react.useState(true);
       const [exportMsg, setExportMsg] = react.useState(null);
+      const [showCreate, setShowCreate] = react.useState(false);
+      const [newName, setNewName] = react.useState("");
+      const [newDesc, setNewDesc] = react.useState("");
+      const [newRoot, setNewRoot] = react.useState("user");
+      const [createMsg, setCreateMsg] = react.useState(null);
       const fetchList = async () => {
         try {
           const res = await fetch("/api/skill-fusion/local");
@@ -661,10 +730,7 @@ window.__ModuleLoader__.load({
         const res = await fetch(`/api/skill-fusion/${path}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
         return res.json();
       };
-      const doToggle = async (sk) => {
-        const data = await post("toggle", { name: sk.name, enabled: !sk.enabled });
-        if (data.ok) fetchList();
-      };
+      const doToggle = async (sk) => { const data = await post("toggle", { name: sk.name, enabled: !sk.enabled }); if (data.ok) fetchList(); };
       const doUninstall = async (name) => { const data = await post("uninstall", { name }); if (data.ok) fetchList(); };
       const doFreeze = async (name) => {
         const version = prompt("Version to freeze at (e.g. 1.0.0):");
@@ -675,6 +741,17 @@ window.__ModuleLoader__.load({
       const doUnfreeze = async (name) => { const data = await post("unfreeze", { name }); if (data.ok) fetchList(); };
       const doUpdate = async (name) => { const data = await post("update", { name }); if (data.ok) fetchList(); };
       const doRollback = async (name) => { const data = await post("rollback", { name }); if (data.ok) fetchList(); };
+      const doDelete = async (sk) => {
+        if (!confirm(t("confirmDelete"))) return;
+        const data = await post("delete", { name: sk.name });
+        if (data.ok) fetchList();
+      };
+      const doRestore = async (sk) => { const data = await post("restore", { name: sk.name }); if (data.ok) fetchList(); };
+      const doCreate = async () => {
+        const data = await post("create", { name: newName.trim(), description: newDesc.trim(), root: newRoot });
+        if (data.ok) { setShowCreate(false); setNewName(""); setNewDesc(""); setCreateMsg(null); fetchList(); }
+        else setCreateMsg(data.error === "exists" ? t("createExists") : t("createInvalid"));
+      };
       const doExport = async () => {
         const res = await fetch("/api/skill-fusion/export");
         const data = await res.json();
@@ -690,23 +767,67 @@ window.__ModuleLoader__.load({
         }
       };
 
+      // Group by source root for display.
+      const SOURCE_ORDER = ["user-dsh", "project-dsh", "project-agents", "user-agents", "plugin"];
+      const srcLabel = (src) => src === "user-dsh" ? t("srcUser") : src === "project-dsh" ? t("srcProject") : src === "project-agents" ? t("srcProjectAgents") : src === "user-agents" ? t("srcAgents") : t("srcPlugin");
+      const grouped = {};
+      const trashed = [];
+      for (const sk of skills || []) {
+        if (sk.trashed) { trashed.push(sk); continue; }
+        (grouped[sk.source] = grouped[sk.source] || []).push(sk);
+      }
+      const groups = SOURCE_ORDER.filter(src => grouped[src]?.length).map(src => [src, grouped[src]]);
+      const activeCount = (skills || []).filter(sk => !sk.trashed).length;
+
       return react.createElement("div", { style: s.section },
         react.createElement("p", { style: s.intro }, t("localIntro")),
-        react.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "center" } },
+        react.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" } },
+          react.createElement("button", { style: s.btn(true), onClick: () => setShowCreate(!showCreate) }, t("create")),
           react.createElement("button", { style: s.btn(false), onClick: doExport }, t("export")),
           exportMsg ? react.createElement("span", { style: s.meta }, exportMsg) : null
         ),
+        showCreate ? react.createElement("div", { style: s.card },
+          react.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
+            react.createElement("input", { style: Object.assign({}, s.input, { flex: "0 0 200px" }), value: newName, onChange: e => setNewName(e.currentTarget.value), placeholder: t("namePlaceholder") }),
+            react.createElement("select", { value: newRoot, onChange: e => setNewRoot(e.currentTarget.value), style: { height: "36px", borderRadius: "8px", border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)", font: "inherit", padding: "0 8px" } },
+              react.createElement("option", { value: "user" }, t("rootUser")),
+              react.createElement("option", { value: "project" }, t("rootProject"))
+            )
+          ),
+          react.createElement("input", { style: s.input, value: newDesc, onChange: e => setNewDesc(e.currentTarget.value), placeholder: t("descPlaceholder") }),
+          react.createElement("div", { style: s.actions },
+            react.createElement("button", { style: s.btn(true), onClick: doCreate }, t("createConfirm")),
+            react.createElement("button", { style: s.btn(false), onClick: () => setShowCreate(false) }, t("createCancel")),
+            createMsg ? react.createElement("span", { style: s.meta }, createMsg) : null
+          )
+        ) : null,
         loading ? react.createElement("p", { style: s.intro }, t("loading")) : null,
-        skills !== null && skills.length === 0 ? react.createElement("p", { style: s.intro }, t("emptyLocal")) : null,
-        skills ? react.createElement("div", { style: s.cards },
-          skills.map(sk => react.createElement(SkillCard, {
+        skills !== null && activeCount === 0 ? react.createElement("p", { style: s.intro }, t("emptyLocal")) : null,
+        groups.map(([src, list]) => react.createElement("div", { key: src, style: { display: "flex", flexDirection: "column", gap: "8px" } },
+          react.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" } },
+            react.createElement("strong", { style: s.cardTitle }, srcLabel(src)),
+            react.createElement("span", { style: s.meta }, `${list.length} ${t("skills")}`),
+            src === "plugin" ? react.createElement("span", { style: s.meta }, t("pluginReadonly")) : null
+          ),
+          ...list.map(sk => react.createElement(SkillCard, {
             key: sk.name, skill: sk, t,
-            onToggle: () => doToggle(sk),
+            onToggle: sk.writable ? () => doToggle(sk) : undefined,
+            onDelete: sk.writable ? () => doDelete(sk) : undefined,
             onUninstall: sk.managed ? () => doUninstall(sk.name) : undefined,
             onFreeze: sk.managed && !(sk.status === "frozen" || sk.frozenVersion) ? () => doFreeze(sk.name) : undefined,
             onUnfreeze: sk.managed && (sk.status === "frozen" || sk.frozenVersion) ? () => doUnfreeze(sk.name) : undefined,
             onUpdate: sk.managed ? () => doUpdate(sk.name) : undefined,
             onRollback: sk.managed ? () => doRollback(sk.name) : undefined,
+          }))
+        )),
+        trashed.length > 0 ? react.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginTop: "8px" } },
+          react.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+            react.createElement("strong", { style: s.cardTitle }, t("trashTitle")),
+            react.createElement("span", { style: s.meta }, `${trashed.length} ${t("skills")}`)
+          ),
+          ...trashed.map(sk => react.createElement(SkillCard, {
+            key: sk.name, skill: sk, t,
+            onRestore: () => doRestore(sk),
           }))
         ) : null
       );
@@ -723,6 +844,10 @@ window.__ModuleLoader__.load({
         view === "market" ? react.createElement(DiscoverView, { t }) : react.createElement(ActivatedView, { t })
       );
     }
+
+    // ---- client/src/entry.js ----
+    // Source module for the client bundle. Edit here, then regenerate
+    // client/client.js with: npm run build:client
 
     const NS = "skillFusion";
     const name = "dsh-skill-fusion";
@@ -745,6 +870,7 @@ window.__ModuleLoader__.load({
     exports.name = name;
     exports.apply = apply;
     exports.inject = inject;
+
     return module.exports;
   }
 });

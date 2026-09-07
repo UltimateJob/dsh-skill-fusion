@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { skillFusionRoutes } from "../lib/routes.js";
 import { readManifest, findSkill } from "../lib/manifest.js";
+import { expectedDirMode } from "./helpers/platform.js";
 
 function freshHome() { return mkdtempSync(join(tmpdir(), "fusion-e2e-int-")); }
 function fixture(root) {
@@ -59,7 +60,7 @@ test("e2e: local source via routes -> discover -> audit -> activate -> list", as
   await actRoute.handler(mockReq("POST", "/api/skill-fusion/activate", { body: { sourceKind: "local", sourceRef: src, name: "adversarial-review" } }), actRes);
   const actPayload = JSON.parse(actRes.result.body);
   assert.equal(actPayload.ok, true);
-  assert.equal(actPayload.mode, "symlink");
+  assert.equal(actPayload.mode, expectedDirMode());
   assert.ok(existsSync(join(home, "skills", "adversarial-review", "SKILL.md")));
   assert.ok(existsSync(join(home, "skills", "adversarial-review", "references", "schema.json")));
 
@@ -74,7 +75,7 @@ test("e2e: local source via routes -> discover -> audit -> activate -> list", as
   // 5. Manifest round-trip
   const entry = findSkill(readManifest(home), "adversarial-review");
   assert.equal(entry.sourceKind, "local");
-  assert.equal(entry.activationMode, "symlink");
+  assert.equal(entry.activationMode, expectedDirMode());
 
   // 6. Uninstall
   const unRoute = routes.find(r => r.path === "/api/skill-fusion/uninstall");

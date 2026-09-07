@@ -1,0 +1,3 @@
+# LF endings everywhere: the client bundle freshness check and snapshot-style
+# assertions must not depend on the checkout platform's line-ending policy.
+* text=auto eol=lf

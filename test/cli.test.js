@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCli } from "../lib/cli.js";
 import { readManifest, findSkill } from "../lib/manifest.js";
+import { symlinkSupported, expectedDirMode } from "./helpers/platform.js";
 
 function freshHome() { return mkdtempSync(join(tmpdir(), "fusion-cli-")); }
 function fixture(root) {
@@ -28,10 +29,10 @@ test("runCli activate symlinks and writes manifest", async () => {
   const code = await runCli(["activate", "--local", src, "--name", "adversarial-review"], { out: () => {}, dshHome: home });
   assert.equal(code, 0);
   const target = join(home, "skills", "adversarial-review");
-  assert.equal(lstatSync(target).isSymbolicLink(), true);
+  assert.equal(lstatSync(target).isSymbolicLink(), symlinkSupported());
   const entry = findSkill(readManifest(home), "adversarial-review");
   assert.equal(entry.sourceKind, "local");
-  assert.equal(entry.activationMode, "symlink");
+  assert.equal(entry.activationMode, expectedDirMode());
 });
 
 test("runCli list shows activated skill", async () => {

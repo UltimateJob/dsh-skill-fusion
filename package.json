@@ -26,7 +26,8 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "build:client": "node bin/build-client.js"
   },
   "license": "MIT",
   "keywords": [

@@ -1,6 +1,6 @@
 ---
 name: skill-fusion
-description: Manage the skill lifecycle in DeepSeek Harness - discover, audit, activate, and freeze any skill package. Search the GitHub/npm skill market by keyword with usage ranking (stars/downloads), or discover from a local folder, npm, GitHub, ~/.claude/skills, or ~/.codex/skills. Audit for prompt-injection risks before activation; list/uninstall already-managed skills.
+description: Manage the skill lifecycle in DeepSeek Harness - discover, audit, activate, and freeze any skill package. Search the GitHub/npm skill market by keyword with usage ranking (stars/downloads), or discover from a local folder, a zip archive, npm, GitHub, ~/.claude/skills, ~/.codex/skills, or ~/.agents/skills. Audit for prompt-injection risks before activation; list/uninstall already-managed skills.
 ---
 
 # Skill Fusion (技能熔炉)
@@ -9,12 +9,14 @@ Drive the skill lifecycle via the `skill-fusion` CLI. Activated skills land in `
 
 ## Commands
 
-### Discover (6 sources)
+### Discover (8 sources)
 
 - `skill-fusion discover --market <query>` - **search the GitHub + npm skill market by keyword**, ranked by stars/popularity. Then inspect a repo/package to list the skills inside.
 - `skill-fusion discover --local <dir> [--q <query>]` - list installable skills found in a local folder.
+- `skill-fusion discover --zip <file> [--q <query>]` - list skills inside a local zip archive.
 - `skill-fusion discover --claude [<dir>]` - scan `~/.claude/skills/` (or override dir).
 - `skill-fusion discover --codex [<dir>]` - scan `~/.codex/skills/` (or override dir).
+- `skill-fusion discover --agents [<dir>]` - scan `~/.agents/skills/`; these are already active in DSH (cross-agent root), so they print a promote hint instead of a plain install.
 - (npm and github discovery via the GUI or route API; CLI `activate` fetches directly)
 
 ### Audit
@@ -22,12 +24,16 @@ Drive the skill lifecycle via the `skill-fusion` CLI. Activated skills land in `
 - `skill-fusion audit --local <dir> --name <name>` - pre-activation audit (conflict + prompt-injection vectors); prints `pass|warn|block` and flagged vectors.
 - `skill-fusion audit --claude [<dir>] --name <name>` - same audit for Claude-rooted skills.
 - `skill-fusion audit --codex [<dir>] --name <name>` - same audit for Codex-rooted skills.
+- `skill-fusion audit --agents [<dir>] --name <name>` - same audit for agents-rooted skills.
+- `skill-fusion audit --zip <file> --name <name>` - same audit for a skill inside a zip archive.
 
 ### Activate
 
 - `skill-fusion activate --local <dir> --name <name> [--mode symlink|copy]` - audit then activate from a local folder.
 - `skill-fusion activate --claude [<dir>] --name <name>` - audit then activate from `~/.claude/skills/`.
 - `skill-fusion activate --codex [<dir>] --name <name>` - audit then activate from `~/.codex/skills/`.
+- `skill-fusion activate --agents [<dir>] --name <name>` - promote a `~/.agents/skills` skill into `~/.dsh/skills` (explicit user action only; never automatic).
+- `skill-fusion activate --zip <file> --name <name>` - extract, audit, activate from a zip archive (always copy mode).
 - `skill-fusion activate --npm <pkg> --name <name>` - download tarball, audit, activate.
 - `skill-fusion activate --github <owner/repo> [--ref <ref>] --name <name>` - download tarball, audit, activate.
 
@@ -48,6 +54,6 @@ For a user request like "activate the skill at ./my-skill": run `discover --loca
 
 For "find skills on the market" / "search for a code review skill": run `discover --market <keyword>` to get ranked GitHub repos + npm packages. Then `discover --github <owner/repo>` (or `--npm <pkg>`) to list the actual skills inside, pick one, `audit`, then `activate --github <owner/repo> --name <name>`.
 
-For "activate skill X from Claude" or "install skill from GitHub repo owner/repo": use `--claude` or `--github` flag respectively. npm and GitHub sources download a tarball before audit+activate.
+For "activate skill X from Claude" or "install skill from GitHub repo owner/repo": use `--claude` or `--github` flag respectively. npm and GitHub sources download a tarball before audit+activate. For "promote this shared agents skill" use `--agents`; for "install from this zip" use `--zip`.
 
 For "freeze this skill" or "update all skills": use `freeze`/`unfreeze`/`update`/`rollback`/`export`/`import` as appropriate. `update` always snapshots before re-activating, so `rollback` is available after any update.

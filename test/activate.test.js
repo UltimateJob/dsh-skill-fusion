@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chooseMode, activateSkill, reconcileOrphans, removeActivation } from "../lib/activate.js";
 import { emptyManifest, upsertSkill } from "../lib/manifest.js";
+import { symlinkSupported, expectedDirMode } from "./helpers/platform.js";
 
 function freshHome() { return mkdtempSync(join(tmpdir(), "fusion-act-")); }
 function fixtureSkill(dir) {
@@ -20,13 +21,13 @@ test("chooseMode: symlink for a real dir", () => {
   assert.equal(chooseMode(src), "symlink");
 });
 
-test("activateSkill: symlinks source into ~/.dsh/skills/<name>", () => {
+test("activateSkill: links (or copies on no-symlink hosts) source into ~/.dsh/skills/<name>", () => {
   const home = freshHome();
   const src = fixtureSkill(join(home, "src"));
   const r = activateSkill({ name: "adversarial-review", sourceDir: src, dshHome: home });
   assert.equal(r.ok, true);
-  assert.equal(r.mode, "symlink");
-  assert.equal(lstatSync(r.target).isSymbolicLink(), true);
+  assert.equal(r.mode, expectedDirMode());
+  assert.equal(lstatSync(r.target).isSymbolicLink(), symlinkSupported());
   assert.equal(existsSync(join(r.target, "SKILL.md")), true);
   assert.equal(existsSync(join(r.target, "references", "r.md")), true);
 });
